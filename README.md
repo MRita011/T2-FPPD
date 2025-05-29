@@ -7,7 +7,6 @@ Este projeto evolui um jogo de aventura em Go com interface textual, inicialment
 **Código original da disciplina de Fundamentos de Processamento Paralelo e Distribuído:**
 🔗 `https://github.com/mvneves/fppd-jogo`
 
----
 ## 🎯 Objetivos
 
 * Adicionar elementos concorrentes interativos
@@ -15,7 +14,6 @@ Este projeto evolui um jogo de aventura em Go com interface textual, inicialment
 * Criar **níveis progressivos**, desafios e critérios de vitória
 * Usar conceitos de concorrência segura (goroutines, canais, mutexes)
 * Garantir execução única de comandos via `sequenceNumber`
----
 
 ## 🕹️ Como Jogar
 
@@ -25,20 +23,16 @@ Este projeto evolui um jogo de aventura em Go com interface textual, inicialment
 * Cada jogador tem um símbolo próprio
 * Clientes se conectam a um **servidor central**
 
----
-
 ## 🌍 Mapa e Níveis
 
 O jogo tem **4 níveis**, cada um com 40 tesouros (160 no total). Para avançar:
 
 | Tesouros Coletados       | Resultado                         |
-| ------------------------ | --------------------------------- |
+|  |  |
 | ≥ 20                     | Avança normalmente                |
 | 15–19 + enfrenta monstro | Avança, perde 5 tesouros          |
 | < 15 + enfrenta monstro  | Avança, perde metade dos tesouros |
 | Nenhuma das condições    | Fica no nível atual               |
-
----
 
 ## ⚙️ Elementos Concorrentes
 
@@ -60,8 +54,6 @@ O jogo tem **4 níveis**, cada um com 40 tesouros (160 no total). Para avançar:
 * Jogadores com poucos tesouros enfrentam o monstro
 * Pode ajudar na recuperação
 
----
-
 ## 🌐 Multiplayer com RPC
 
 ### 🧠 Servidor
@@ -77,8 +69,6 @@ O jogo tem **4 níveis**, cada um com 40 tesouros (160 no total). Para avançar:
 * Envia ações e recebe atualizações via RPC
 * Usa goroutine para atualizações contínuas
 
----
-
 ## 👑 Vitória
 
 No final do 4º nível, vence:
@@ -87,8 +77,6 @@ No final do 4º nível, vence:
 2. Se empate, quem tiver mais **vidas**
 3. Persistindo empate, quem teve menos penalidades
 
----
-
 ## 🛠️ Compilação
 
 ### 🪟 Windows
@@ -96,9 +84,6 @@ No final do 4º nível, vence:
 ```cmd
 go build -o jogo.exe
 ```
-
----
-
 ## ▶️ Execução
 
 1. Inicie o **servidor**
@@ -110,13 +95,9 @@ go build -o jogo.exe
 ./jogo       # terminal 2 (cliente)
 ```
 
----
-
 ## 📡 Exemplo de Conexão RPC
 
 Projeto também inclui um exemplo básico de conexão cliente-servidor com RPC em Go.
-
----
 
 ### 📁 Estrutura
 
@@ -128,14 +109,10 @@ T2-FPPD/
 └── shared/shared.go  // Tipos compartilhados
 ```
 
----
-
 ### ⚙️ Requisitos
 
 * Go instalado → [https://golang.org/dl/](https://golang.org/dl/)
 * Rodar `go mod init T2-FPPD` dentro da pasta
-
----
 
 ### ▶️ Executar
 
@@ -159,7 +136,6 @@ go run client/client.go
 Resposta do servidor: Bem-vindo, Deus Tenha Piedade!
 ```
 
----
 
 ## 🧑‍💻 Grupo
 
@@ -168,7 +144,6 @@ Resposta do servidor: Bem-vindo, Deus Tenha Piedade!
 * Luís Trein – [luis.trein@edu.pucrs.br](mailto:luis.trein@edu.pucrs.br)
 * **Maria Rita** – [m.ritarodrigues09@gmail.com](mailto:m.ritarodrigues09@gmail.com)
 
----
 
 ## 📄 Relatório
 📄 *\[Link do relatório]* (ainda não escrito)
