@@ -1,2 +1,2 @@
 // funções expostas via RPC
-package servidor
+package server
