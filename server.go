@@ -1,1 +1,0 @@
-// inicializa o servidor RPC

@@ -1,86 +1,93 @@
-# Jogo Concorrente e Multiplayer em Go
+# 🎮 Jogo Concorrente e Multiplayer em Go
 
 ## 🧭 Visão Geral
 
-Este projeto evolui um jogo de aventura em Go com interface textual, inicialmente focado em concorrência, para uma versão multiplayer usando RPC. A nova implementação permite que **múltiplos jogadores explorem um mapa dinâmico**, enfrentando **desafios concorrentes**, coletando tesouros e interagindo com **elementos móveis**, enquanto compartilham suas ações via servidor central.
+Este projeto evolui um jogo de aventura em Go com interface textual, inicialmente focado em concorrência, para uma versão multiplayer usando RPC. A nova implementação permite que múltiplos jogadores explorem um mapa dinâmico, enfrentando armadilhas, monstros e coletando tesouros, tudo conectado a um **servidor central**.
 
-O código-base original foi fornecido pelo professor da disciplina de Fundamentos de Processamento Paralelo e Distribuído.
-Repositório original:
-`https://github.com/mvneves/fppd-jogo`
+**Código original da disciplina de Fundamentos de Processamento Paralelo e Distribuído:**
+🔗 `https://github.com/mvneves/fppd-jogo`
 
+---
 ## 🎯 Objetivos
 
-* Adicionar elementos concorrentes que interajam com o jogador de forma autônoma.
-* Expandir o jogo para o **modo multiplayer** com **comunicação RPC cliente-servidor**.
-* Implementar **níveis progressivos de jogo**, desafios, penalidades e critérios de vitória.
-* Aplicar conceitos de **concorrência segura** (goroutines, canais, mutexes, select).
-* Garantir consistência via **execução única de comandos RPC (exactly-once)**.
+* Adicionar elementos concorrentes interativos
+* Tornar o jogo multiplayer com **RPC cliente-servidor**
+* Criar **níveis progressivos**, desafios e critérios de vitória
+* Usar conceitos de concorrência segura (goroutines, canais, mutexes)
+* Garantir execução única de comandos via `sequenceNumber`
+---
 
 ## 🕹️ Como Jogar
 
-* Use `W`, `A`, `S`, `D` para mover o personagem.
-* Pressione `E` para interagir com o ambiente.
-* Pressione `ESC` para sair do jogo.
-* Cada jogador é representado por um símbolo exclusivo.
-* O jogo é executado em múltiplas instâncias clientes que se conectam a um **servidor central**.
+* `W`, `A`, `S`, `D`: mover personagem
+* `E`: interagir
+* `ESC`: sair
+* Cada jogador tem um símbolo próprio
+* Clientes se conectam a um **servidor central**
+
+---
 
 ## 🌍 Mapa e Níveis
 
-O mapa é dividido em **quatro níveis**, cada um com 40 tesouros escondidos, totalizando 160. Para avançar:
+O jogo tem **4 níveis**, cada um com 40 tesouros (160 no total). Para avançar:
 
-| Condição                          | Resultado                             |
-| --------------------------------- | ------------------------------------- |
-| ≥ 20 tesouros                     | Avança normalmente                    |
-| 15–19 tesouros + enfrenta monstro | Avança, mas perde 5 tesouros          |
-| < 15 tesouros + enfrenta monstro  | Avança, mas perde metade dos tesouros |
-| Nenhuma das condições             | Permanece no nível                    |
+| Tesouros Coletados       | Resultado                         |
+| ------------------------ | --------------------------------- |
+| ≥ 20                     | Avança normalmente                |
+| 15–19 + enfrenta monstro | Avança, perde 5 tesouros          |
+| < 15 + enfrenta monstro  | Avança, perde metade dos tesouros |
+| Nenhuma das condições    | Fica no nível atual               |
+
+---
 
 ## ⚙️ Elementos Concorrentes
 
 ### 💰 Tesouros
 
 * Coletáveis e acumuláveis
-* Protegidos por `mutex` para evitar condições de corrida.
-* Contabilizados por jogador.
+* Protegidos por `mutex`
+* Contabilizados por jogador
 
 ### 💣 Armadilhas
 
-  * **Espinhos Andarilhos**: móveis, causam perda de até 3 tesouros.
-  * **Espinhos Nômades**: fixos, causam perda de 1 tesouro.
+* **Espinhos Andarilhos**: móveis, perdem até 3 tesouros
+* **Espinhos Nômades**: fixos, perdem 1 tesouro
 
 ### 👾 Monstro (`¥`)
 
-* Surge em cada nível.
-* Comportamento:
-  * Nível 1 – 2: passivo
-  * Nível 3 – 4: contra-ataca e reduz vidas
-* Pode ser enfrentado por jogadores que não coletaram tesouros suficientes.
-* Usado como **mecânica de recuperação**.
+* Um por nível
+* Níveis 1–2: passivo | Níveis 3–4: contra-ataca
+* Jogadores com poucos tesouros enfrentam o monstro
+* Pode ajudar na recuperação
+
+---
 
 ## 🌐 Multiplayer com RPC
 
-### Arquitetura
+### 🧠 Servidor
 
-#### 🧠 Servidor
+* Mantém estado global
+* Gerencia posições, vidas, tesouros
+* **Sem interface gráfica**
+* Garante execução única via `sequenceNumber`
 
-* Mantém o estado global do jogo.
-* Gerencia posições, vidas, tesouros e caixas.
-* **Não possui interface gráfica**.
-* Processa comandos com `sequenceNumber` para garantir execução única.
+### 🎮 Cliente
 
-#### 🎮 Cliente
+* Interface do jogador
+* Envia ações e recebe atualizações via RPC
+* Usa goroutine para atualizações contínuas
 
-* Interface de jogo para o jogador.
-* Envia ações e busca estado do servidor via chamadas RPC.
-* Possui goroutine dedicada para atualizações periódicas de estado.
+---
 
 ## 👑 Vitória
 
-Ao fim do 4º nível, vence:
+No final do 4º nível, vence:
 
-1. Quem tiver mais **tesouros acumulados**.
-2. Em caso de empate, quem tiver mais **vidas restantes**.
-3. Persistindo empate, vence quem sofreu menos penalidades pelos espinhos ao longo das partidas.
+1. Quem tiver mais **tesouros**
+2. Se empate, quem tiver mais **vidas**
+3. Persistindo empate, quem teve menos penalidades
+
+---
 
 ## 🛠️ Compilação
 
@@ -90,30 +97,78 @@ Ao fim do 4º nível, vence:
 go build -o jogo.exe
 ```
 
+---
+
 ## ▶️ Execução
 
-* Certifique-se de iniciar o **servidor** antes dos **clientes**.
-* Deixe o arquivo `mapa.txt` no diretório raiz com um mapa válido.
+1. Inicie o **servidor**
+2. Depois, os **clientes**
+3. Deixe `mapa.txt` no diretório raiz
 
 ```cmd
-./servidor   # em um terminal
-./jogo       # em outro terminal (cliente)
+./servidor   # terminal 1
+./jogo       # terminal 2 (cliente)
 ```
+
+---
+
+## 📡 Exemplo de Conexão RPC
+
+Projeto também inclui um exemplo básico de conexão cliente-servidor com RPC em Go.
+
+---
+
+### 📁 Estrutura
+
+```
+T2-FPPD/
+├── main.go           // Inicia o servidor
+├── server/server.go  // Lógica do servidor
+├── client/client.go  // Cliente que se conecta
+└── shared/shared.go  // Tipos compartilhados
+```
+
+---
+
+### ⚙️ Requisitos
+
+* Go instalado → [https://golang.org/dl/](https://golang.org/dl/)
+* Rodar `go mod init T2-FPPD` dentro da pasta
+
+---
+
+### ▶️ Executar
+
+#### 1. Servidor
+
+```bash
+go run main.go
+```
+
+```
+Servidor iniciado na porta 8080...
+```
+
+#### 2. Cliente
+
+```bash
+go run client/client.go
+```
+
+```
+Resposta do servidor: Bem-vindo, Deus Tenha Piedade!
+```
+
+---
 
 ## 🧑‍💻 Grupo
 
-* Amanda Wilmsen: [amanda.wilmsen@edu.pucrs.br](mailto:amanda.wilmsen@edu.pucrs.br)
-* Killian D.B: [killian.d@edu.pucrs.br](mailto:killian.d@edu.pucrs.br)
-* Luís Trein: [luis.trein@edu.pucrs.br](mailto:luis.trein@edu.pucrs.br)
-* Maria Rita: [m.ritarodrigues09@gmail.com](mailto:m.ritarodrigues09@gmail.com)
+* Amanda Wilmsen – [amanda.wilmsen@edu.pucrs.br](mailto:amanda.wilmsen@edu.pucrs.br)
+* Killian D.B – [killian.d@edu.pucrs.br](mailto:killian.d@edu.pucrs.br)
+* Luís Trein – [luis.trein@edu.pucrs.br](mailto:luis.trein@edu.pucrs.br)
+* **Maria Rita** – [m.ritarodrigues09@gmail.com](mailto:m.ritarodrigues09@gmail.com)
+
+---
 
 ## 📄 Relatório
-
-O relatório detalha:
-
-* A implementação do modo multiplayer
-* A integração com RPC
-* Os novos elementos e interações concorrentes
-* Estratégias para garantir consistência e concorrência segura
-
-📄 [Link do Relatório no DOCS](ainda não escrito)
+📄 *\[Link do relatório]* (ainda não escrito)
