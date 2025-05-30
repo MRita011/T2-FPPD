@@ -94,26 +94,6 @@ go build -o jogo.exe
 ./servidor   # terminal 1
 ./jogo       # terminal 2 (cliente)
 ```
-
-## 📡 Exemplo de Conexão RPC
-
-Projeto também inclui um exemplo básico de conexão cliente-servidor com RPC em Go.
-
-### 📁 Estrutura
-
-```
-T2-FPPD/
-├── main.go           // Inicia o servidor
-├── server/server.go  // Lógica do servidor
-├── client/client.go  // Cliente que se conecta
-└── shared/shared.go  // Tipos compartilhados
-```
-
-### ⚙️ Requisitos
-
-* Go instalado → [https://golang.org/dl/](https://golang.org/dl/)
-* Rodar `go mod init T2-FPPD` dentro da pasta
-
 ### ▶️ Executar
 
 #### 1. Servidor
