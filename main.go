@@ -11,12 +11,12 @@ func main() {
 	s := new(server.Servidor)
 	rpc.Register(s)
 
-	ouvinte, err := net.Listen("tcp", ":8080")
+	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatal("Erro ao escutar: ", err)
 	}
-	defer ouvinte.Close()
+	defer listener.Close()
 
 	log.Println("Servidor iniciado na porta 8080...")
-	rpc.Accept(ouvinte)
+	rpc.Accept(listener)
 }
