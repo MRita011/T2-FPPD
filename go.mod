@@ -1,3 +1,3 @@
-module T2-FPPD
+module fppd-jogo
 
 go 1.24.2
