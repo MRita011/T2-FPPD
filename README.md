@@ -84,36 +84,19 @@ No final do 4º nível, vence:
 ```cmd
 go build -o jogo.exe
 ```
+
 ## ▶️ Execução
 
-1. Inicie o **servidor**
-2. Depois, os **clientes**
-3. Deixe `mapa.txt` no diretório raiz
-
-```cmd
-./servidor   # terminal 1
-./jogo       # terminal 2 (cliente)
-```
-### ▶️ Executar
-
-#### 1. Servidor
+### 1. Servidor
 
 ```bash
-go run main.go
+go run server/main.go server/state.go
 ```
 
-```
-Servidor iniciado na porta 8080...
-```
-
-#### 2. Cliente
+### 2. Cliente
 
 ```bash
-go run client/client.go
-```
-
-```
-Resposta do servidor: Bem-vindo, Deus Tenha Piedade!
+go run client/main.go client/rpc_client.go
 ```
 
 
@@ -123,7 +106,6 @@ Resposta do servidor: Bem-vindo, Deus Tenha Piedade!
 * Killian D.B – [killian.d@edu.pucrs.br](mailto:killian.d@edu.pucrs.br)
 * Luís Trein – [luis.trein@edu.pucrs.br](mailto:luis.trein@edu.pucrs.br)
 * **Maria Rita** – [m.ritarodrigues09@gmail.com](mailto:m.ritarodrigues09@gmail.com)
-
 
 ## 📄 Relatório
 📄 *\[Link do relatório]* (ainda não escrito)
