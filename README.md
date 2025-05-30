@@ -107,13 +107,13 @@ go build -o jogo.exe
 ### 1. Servidor
 
 ```bash
-go run server/main.go server/state.go
+go run ./server
 ```
 
 ### 2. Cliente
 
 ```bash
-go run client/main.go client/rpc_client.go
+go run ./client
 ```
 
 ---
