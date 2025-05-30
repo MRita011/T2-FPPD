@@ -27,12 +27,13 @@ Este projeto evolui um jogo de aventura em Go com interface textual, inicialment
 
 O jogo tem **4 níveis**, cada um com 40 tesouros (160 no total). Para avançar:
 
-| Tesouros Coletados       | Resultado                         |
-|  |  |
-| ≥ 20                     | Avança normalmente                |
-| 15–19 + enfrenta monstro | Avança, perde 5 tesouros          |
-| < 15 + enfrenta monstro  | Avança, perde metade dos tesouros |
-| Nenhuma das condições    | Fica no nível atual               |
+| Tesouros Coletados         | Resultado                         |
+|----------------------------|-----------------------------------|
+| ≥ 20                       | Avança normalmente                |
+| 15–19 + enfrenta monstro   | Avança, perde 5 tesouros          |
+| < 15 + enfrenta monstro    | Avança, perde metade dos tesouros |
+| Nenhuma das condições      | Fica no nível atual               |
+
 
 ## ⚙️ Elementos Concorrentes
 
