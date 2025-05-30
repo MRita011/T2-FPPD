@@ -9,9 +9,8 @@ import (
 	"fppd-jogo/common"
 )
 
-// servidor com estado compartilhado
 type GameServer struct {
-	state *common.StateGame
+	state *StateGame
 }
 
 func (g *GameServer) RegisterPlayer(req *common.JoinRequest, res *common.JoinResponse) error {
@@ -24,16 +23,16 @@ func (g *GameServer) RegisterPlayer(req *common.JoinRequest, res *common.JoinRes
 }
 
 func main() {
-	server := &GameServer{state: common.NewStateGame()}
+	server := &GameServer{state: NewStateGame()}
 
 	err := rpc.Register(server)
 	if err != nil {
-		log.Fatal("Erro ao registrar servidor: ", err)
+		log.Fatal("Erro ao registrar servidor:", err)
 	}
 
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		log.Fatal("Erro ao ouvir: ", err)
+		log.Fatal("Erro ao iniciar o servidor:", err)
 	}
 
 	fmt.Println("Servidor ouvindo na porta 8080...")
