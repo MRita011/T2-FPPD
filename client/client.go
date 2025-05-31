@@ -1,60 +1,77 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"fppd-jogo/common" // tipos compartilhados serv/cliente
+	"fppd-jogo/common"
 	"log"
 	"net/rpc"
+	"os"
+	"strings"
 	"time"
 )
 
-// registra um jogador no servidor + inicia o loop de atualização do mapa
 func registerPlayer(name string) {
-	client, err := rpc.Dial("tcp", "localhost:8080") // conecta ao servidor
+	client, err := rpc.Dial("tcp", "localhost:8080")
 	if err != nil {
 		log.Fatal("erro ao conectar ao servidor:", err)
 	}
 	defer client.Close()
 
-	req := common.JoinRequest{Name: name} // montando a req pro servidor com o nome do jogador
-	var res common.JoinResponse           // variavel que recebe a resposta do servidor
+	req := common.JoinRequest{Name: name}
+	var res common.JoinResponse
 
-	// chamada rpc para registrar o jogador
 	err = client.Call("GameServer.RegisterPlayer", &req, &res)
 	if err != nil {
 		log.Fatal("erro na chamada rpc:", err)
 	}
 
 	fmt.Printf("jogador registrado com id: %d\n", res.ID)
-	// iniciando o loop de att do jogo
+
+	// Goroutine para escutar o teclado
+	go listenInput(client, res.Player.ID)
+
+	// Loop para atualização do mapa
 	updateMap(client, res.Player.ID)
 }
 
-// loop que atualiza o mapa
-func updateMap(client *rpc.Client, playerID int) {
+func listenInput(client *rpc.Client, playerID int) {
+	reader := bufio.NewReader(os.Stdin)
+
 	for {
-		var state common.GameState                     // variavel que recebe o estado do jogo
-		req := common.StateRequest{PlayerID: playerID} // montando a req com o id do jogador
+		fmt.Print("Digite comando (ex: w, a, s, d): ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
 
-		err := client.Call("GameServer.GetState", req, &state) // chamando o método GetState do servidor
-		if err != nil {
-			log.Println("erro ao obter estado do jogo:", err)
-			time.Sleep(time.Second)
-			continue // espera 1 segundo e tenta de novo
-		}
-
-		renderMap(&state)
-		time.Sleep(500 * time.Millisecond) // espera 500ms antes de fazer a próxima atualização
+		// Aqui você pode enviar comandos ao servidor se desejar
+		fmt.Println("Comando recebido:", input)
 	}
 }
 
-// renderiza o mapa do jogo
+func updateMap(client *rpc.Client, playerID int) {
+	for {
+		var state common.GameState
+		req := common.StateRequest{PlayerID: playerID}
+
+		err := client.Call("GameServer.GetState", req, &state)
+		if err != nil {
+			log.Println("erro ao obter estado do jogo:", err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		renderMap(&state)
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 func renderMap(state *common.GameState) {
-	fmt.Print("\033[H\033[2J") // limpa o terminal
+	fmt.Print("\033[H\033[2J")
 
 	for y := 0; y < state.MapHeight; y++ {
 		for x := 0; x < state.MapWidth; x++ {
-			symbol := " " // símbolo padrão é espaço em branco
+			symbol := " "
+
 			for _, p := range state.Players {
 				if p.X == x && p.Y == y {
 					symbol = p.Symbol
@@ -75,8 +92,9 @@ func renderMap(state *common.GameState) {
 					break
 				}
 			}
-			fmt.Print(symbol) // imprime o símbolo na posição atual do mapa
+
+			fmt.Print(symbol)
 		}
-		fmt.Println() // vai para próxima depois de imprimir uma linha completa
+		fmt.Println()
 	}
 }

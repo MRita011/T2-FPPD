@@ -19,7 +19,6 @@ type GameState struct {
 	Players   []Player
 	Traps     []Element
 	Treasures []Element
-	NPCs      []Element // opcional
 }
 
 type Player struct {

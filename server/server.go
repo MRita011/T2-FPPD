@@ -1,19 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"fppd-jogo/common"
 	"log"
 	"net"
 	"net/rpc"
+	"time"
 )
 
-// GameServer é o objeto RPC com referência ao estado do jogo
+// GameServer expõe métodos RPC
 type GameServer struct {
 	state *StateGame
 }
 
-// Método RPC para registrar jogador
 func (s *GameServer) RegisterPlayer(req *common.JoinRequest, res *common.JoinResponse) error {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -29,7 +28,7 @@ func (s *GameServer) RegisterPlayer(req *common.JoinRequest, res *common.JoinRes
 		Symbol: "P",
 	}
 
-	fmt.Printf("Jogador registrado: %s (ID %d)\n", req.Name, id)
+	log.Printf("[%s] Jogador registrado: %s (ID %d)\n", time.Now().Format(time.RFC3339), req.Name, id)
 
 	*res = common.JoinResponse{
 		ID:     id,
@@ -38,24 +37,27 @@ func (s *GameServer) RegisterPlayer(req *common.JoinRequest, res *common.JoinRes
 	return nil
 }
 
-// Método RPC para retornar o estado do jogo
 func (s *GameServer) GetState(req common.StateRequest, res *common.GameState) error {
 	s.state.Lock()
 	defer s.state.Unlock()
 
+	log.Printf("[%s] Estado solicitado por jogador %d\n", time.Now().Format(time.RFC3339), req.PlayerID)
+
 	*res = common.GameState{
-		MapWidth:  20,
-		MapHeight: 10,
+		MapWidth:  s.state.mapWidth,
+		MapHeight: s.state.mapHeight,
 		Players:   s.state.getPlayersSlice(),
-		Traps:     []common.Element{}, // Exemplo: preenchido depois
-		Treasures: []common.Element{}, // Idem
+		Traps:     s.state.traps,
+		Treasures: s.state.treasures,
 	}
 	return nil
 }
 
 func main() {
-	server := &GameServer{state: NewStateGame()}
+	state := NewStateGame()
+	state.LoadMapFromFile("mapa.txt") // carrega traps e treasures
 
+	server := &GameServer{state: state}
 	rpc.Register(server)
 
 	listener, err := net.Listen("tcp", ":8080")
