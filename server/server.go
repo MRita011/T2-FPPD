@@ -79,6 +79,7 @@ func (s *GameServer) MovePlayer(req *common.MoveRequest, res *common.MoveRespons
 		*res = common.MoveResponse{Success: false, Message: "Direção inválida"}
 		return nil
 	}
+	log.Printf(">> [%s] Jogador %d moveu para (%d, %d)", time.Now().Format(time.RFC3339), player.ID, newX, newY)
 
 	if newX < 0 || newX >= s.state.mapWidth || newY < 0 || newY >= s.state.mapHeight {
 		*res = common.MoveResponse{Success: false, Message: "Movimento fora dos limites"}

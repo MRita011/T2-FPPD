@@ -1,14 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"fppd-jogo/common"
 	"log"
 	"net/rpc"
-	"os"
 	"strings"
 
+	"github.com/eiannone/keyboard"
 	"github.com/inancgumus/screen"
 )
 
@@ -29,16 +28,28 @@ func registerPlayer(name string) {
 
 	fmt.Printf("Jogador registrado: %s (ID %d)\n", name, res.ID)
 
-	go escutarTeclado(client, res.ID)
-	renderMapa(client, res.ID)
+	// inicia loop principal de input + renderização
+	escutarTeclado(client, res.ID)
 }
 
 func escutarTeclado(client *rpc.Client, playerID int) {
-	reader := bufio.NewReader(os.Stdin)
+	err := keyboard.Open()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keyboard.Close()
+
 	for {
-		fmt.Print("→ ")
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(strings.ToUpper(input))
+		renderMapa(client, playerID)
+
+		fmt.Print("→ Use W A S D para mover: ")
+
+		char, key, err := keyboard.GetKey()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		input := strings.ToUpper(string(char))
 
 		if input == "W" || input == "A" || input == "S" || input == "D" {
 			var res common.MoveResponse
@@ -46,7 +57,14 @@ func escutarTeclado(client *rpc.Client, playerID int) {
 			err := client.Call("GameServer.MovePlayer", &req, &res)
 			if err != nil {
 				log.Println("Erro movimentando:", err)
+			} else {
+				fmt.Println(res.Message)
 			}
+		}
+
+		if key == keyboard.KeyEsc {
+			fmt.Println("Saindo do jogo...")
+			break
 		}
 	}
 }
@@ -69,7 +87,7 @@ func renderizar(state *common.GameState) {
 		var lineBuilder strings.Builder
 
 		for x := 0; x < state.MapWidth; x++ {
-			symbol := state.MapBase[y][x] // fundo do mapa
+			symbol := state.MapBase[y][x]
 
 			for _, e := range state.Treasures {
 				if e.X == x && e.Y == y {

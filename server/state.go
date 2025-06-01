@@ -39,7 +39,7 @@ func (s *StateGame) LoadMapFromFile(filename string) {
 	lines := []string{}
 	maxWidth := 0
 
-	file, err := os.Open("/Users/luistrein/T2-fppd/T2-FPPD/server/mapa.txt")
+	file, err := os.Open("server/mapa.txt")
 	if err != nil {
 		log.Fatalf("Erro ao abrir o arquivo: %v", err)
 	}
