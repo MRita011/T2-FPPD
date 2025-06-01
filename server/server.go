@@ -45,10 +45,12 @@ func (s *GameServer) GetState(req common.StateRequest, res *common.GameState) er
 	*res = common.GameState{
 		MapWidth:  s.state.mapWidth,
 		MapHeight: s.state.mapHeight,
+		MapBase:   s.state.mapaBase,
 		Players:   s.state.getPlayersSlice(),
 		Traps:     s.state.traps,
 		Treasures: s.state.treasures,
 	}
+
 	return nil
 }
 

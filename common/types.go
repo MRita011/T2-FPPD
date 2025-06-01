@@ -16,6 +16,7 @@ type StateRequest struct {
 type GameState struct {
 	MapWidth  int
 	MapHeight int
+	MapBase   [][]rune
 	Players   []Player
 	Traps     []Element
 	Treasures []Element

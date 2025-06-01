@@ -8,7 +8,8 @@ import (
 	"net/rpc"
 	"os"
 	"strings"
-	"time"
+
+	"github.com/inancgumus/screen"
 )
 
 func registerPlayer(name string) {
@@ -29,7 +30,7 @@ func registerPlayer(name string) {
 	fmt.Printf("Jogador registrado: %s (ID %d)\n", name, res.ID)
 
 	go escutarTeclado(client, res.ID)
-	atualizarMapa(client, res.ID)
+	renderMapa(client, res.ID)
 }
 
 func escutarTeclado(client *rpc.Client, playerID int) {
@@ -50,25 +51,25 @@ func escutarTeclado(client *rpc.Client, playerID int) {
 	}
 }
 
-func atualizarMapa(client *rpc.Client, playerID int) {
-	for {
-		var state common.GameState
-		err := client.Call("GameServer.GetState", common.StateRequest{PlayerID: playerID}, &state)
-		if err != nil {
-			log.Println("Erro ao buscar estado:", err)
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		renderizar(&state)
-		time.Sleep(200 * time.Millisecond)
+func renderMapa(client *rpc.Client, playerID int) {
+	var state common.GameState
+	err := client.Call("GameServer.GetState", common.StateRequest{PlayerID: playerID}, &state)
+	if err != nil {
+		log.Println("Erro ao buscar estado:", err)
+		return
 	}
+	renderizar(&state)
 }
 
 func renderizar(state *common.GameState) {
-	fmt.Print("\033[H\033[2J")
+	screen.Clear()
+	screen.MoveTopLeft()
+
 	for y := 0; y < state.MapHeight; y++ {
+		var lineBuilder strings.Builder
+
 		for x := 0; x < state.MapWidth; x++ {
-			symbol := ' '
+			symbol := state.MapBase[y][x] // fundo do mapa
 
 			for _, e := range state.Treasures {
 				if e.X == x && e.Y == y {
@@ -76,14 +77,12 @@ func renderizar(state *common.GameState) {
 					break
 				}
 			}
-
 			for _, e := range state.Traps {
 				if e.X == x && e.Y == y {
 					symbol = e.Symbol
 					break
 				}
 			}
-
 			for _, p := range state.Players {
 				if p.X == x && p.Y == y {
 					symbol = p.Symbol
@@ -91,8 +90,9 @@ func renderizar(state *common.GameState) {
 				}
 			}
 
-			fmt.Printf("%c", symbol)
+			lineBuilder.WriteRune(symbol)
 		}
-		fmt.Println()
+
+		fmt.Println(lineBuilder.String())
 	}
 }
