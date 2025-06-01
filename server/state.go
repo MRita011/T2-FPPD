@@ -1,17 +1,21 @@
 package main
 
 import (
-	"fmt"
-	"sync"
-
+	"bufio"
 	"fppd-jogo/common"
+	"log"
+	"os"
+	"sync"
 )
 
-// Estado global do jogo
 type StateGame struct {
 	sync.Mutex
-	nextID  int
-	players map[int]*common.Player
+	nextID    int
+	players   map[int]*common.Player
+	traps     []common.Element
+	treasures []common.Element
+	mapWidth  int
+	mapHeight int
 }
 
 func NewStateGame() *StateGame {
@@ -21,18 +25,47 @@ func NewStateGame() *StateGame {
 	}
 }
 
-func (s *StateGame) RegisterPlayer(name string) (int, error) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.nextID++
-	id := s.nextID
-
-	s.players[id] = &common.Player{
-		ID:   id,
-		Name: name,
+func (s *StateGame) getPlayersSlice() []common.Player {
+	players := []common.Player{}
+	for _, p := range s.players {
+		players = append(players, *p)
 	}
+	return players
+}
 
-	fmt.Printf("Jogador registrado: %s (ID %d)\n", name, id)
-	return id, nil
+func (s *StateGame) LoadMapFromFile(filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Erro ao abrir mapa: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	y := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		runes := []rune(line)
+		if len(runes) > s.mapWidth {
+			s.mapWidth = len(runes)
+		}
+
+		for x, ch := range runes {
+			switch ch {
+			case '▤': // parede (não usado no render atual, mas pode salvar)
+				// ignore for now
+			case '♣':
+				// pode ser vegetação se quiser adicionar
+			case '☠':
+				s.traps = append(s.traps, common.Element{X: x, Y: y, Symbol: ch})
+			case '$':
+				s.treasures = append(s.treasures, common.Element{X: x, Y: y, Symbol: ch})
+			}
+		}
+		y++
+	}
+	s.mapHeight = y
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Erro ao ler mapa: %v", err)
+	}
 }
