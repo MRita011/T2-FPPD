@@ -5,7 +5,6 @@ import (
 	"fppd-jogo/common"
 	"log"
 	"os"
-	"strings"
 	"sync"
 )
 
@@ -37,8 +36,7 @@ func (s *StateGame) getPlayersSlice() []common.Player {
 func (s *StateGame) LoadMapFromFile(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Printf("Erro ao abrir mapa: %v", err)
-		return
+		log.Fatalf("Erro ao abrir mapa: %v", err)
 	}
 	defer file.Close()
 
@@ -46,13 +44,21 @@ func (s *StateGame) LoadMapFromFile(filename string) {
 	y := 0
 	for scanner.Scan() {
 		line := scanner.Text()
-		s.mapWidth = len(line)
-		for x, char := range strings.TrimSpace(line) {
-			switch char {
-			case 'X':
-				s.traps = append(s.traps, common.Element{X: x, Y: y, Symbol: "X"})
+		runes := []rune(line)
+		if len(runes) > s.mapWidth {
+			s.mapWidth = len(runes)
+		}
+
+		for x, ch := range runes {
+			switch ch {
+			case '▤': // parede (não usado no render atual, mas pode salvar)
+				// ignore for now
+			case '♣':
+				// pode ser vegetação se quiser adicionar
+			case '☠':
+				s.traps = append(s.traps, common.Element{X: x, Y: y, Symbol: ch})
 			case '$':
-				s.treasures = append(s.treasures, common.Element{X: x, Y: y, Symbol: "$"})
+				s.treasures = append(s.treasures, common.Element{X: x, Y: y, Symbol: ch})
 			}
 		}
 		y++
@@ -60,6 +66,6 @@ func (s *StateGame) LoadMapFromFile(filename string) {
 	s.mapHeight = y
 
 	if err := scanner.Err(); err != nil {
-		log.Printf("Erro ao ler mapa: %v", err)
+		log.Fatalf("Erro ao ler mapa: %v", err)
 	}
 }

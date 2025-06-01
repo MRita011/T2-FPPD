@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// GameServer expõe métodos RPC
 type GameServer struct {
 	state *StateGame
 }
@@ -25,7 +24,7 @@ func (s *GameServer) RegisterPlayer(req *common.JoinRequest, res *common.JoinRes
 		Name:   req.Name,
 		X:      1,
 		Y:      1,
-		Symbol: "P",
+		Symbol: '☺', // ← símbolo como RUNE
 	}
 
 	log.Printf("[%s] Jogador registrado: %s (ID %d)\n", time.Now().Format(time.RFC3339), req.Name, id)
@@ -53,9 +52,47 @@ func (s *GameServer) GetState(req common.StateRequest, res *common.GameState) er
 	return nil
 }
 
+func (s *GameServer) MovePlayer(req *common.MoveRequest, res *common.MoveResponse) error {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	player, exists := s.state.players[req.PlayerID]
+	if !exists {
+		*res = common.MoveResponse{Success: false, Message: "Jogador não encontrado"}
+		return nil
+	}
+
+	newX, newY := player.X, player.Y
+
+	switch req.Direction {
+	case "W":
+		newY--
+	case "S":
+		newY++
+	case "A":
+		newX--
+	case "D":
+		newX++
+	default:
+		*res = common.MoveResponse{Success: false, Message: "Direção inválida"}
+		return nil
+	}
+
+	if newX < 0 || newX >= s.state.mapWidth || newY < 0 || newY >= s.state.mapHeight {
+		*res = common.MoveResponse{Success: false, Message: "Movimento fora dos limites"}
+		return nil
+	}
+
+	player.X = newX
+	player.Y = newY
+
+	*res = common.MoveResponse{Success: true, Message: "Movido com sucesso"}
+	return nil
+}
+
 func main() {
 	state := NewStateGame()
-	state.LoadMapFromFile("mapa.txt") // carrega traps e treasures
+	state.LoadMapFromFile("mapa.txt")
 
 	server := &GameServer{state: state}
 	rpc.Register(server)

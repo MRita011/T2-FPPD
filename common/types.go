@@ -25,10 +25,20 @@ type Player struct {
 	ID     int
 	Name   string
 	X, Y   int
-	Symbol string
+	Symbol rune // ← MUDANÇA AQUI
 }
 
 type Element struct {
 	X, Y   int
-	Symbol string
+	Symbol rune // ← MUDANÇA AQUI
+}
+
+type MoveRequest struct {
+	PlayerID  int
+	Direction string
+}
+
+type MoveResponse struct {
+	Success bool
+	Message string
 }

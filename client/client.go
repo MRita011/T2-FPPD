@@ -14,7 +14,7 @@ import (
 func registerPlayer(name string) {
 	client, err := rpc.Dial("tcp", "localhost:8080")
 	if err != nil {
-		log.Fatal("erro ao conectar ao servidor:", err)
+		log.Fatal("Erro ao conectar:", err)
 	}
 	defer client.Close()
 
@@ -23,54 +23,66 @@ func registerPlayer(name string) {
 
 	err = client.Call("GameServer.RegisterPlayer", &req, &res)
 	if err != nil {
-		log.Fatal("erro na chamada rpc:", err)
+		log.Fatal("Erro ao registrar:", err)
 	}
 
-	fmt.Printf("jogador registrado com id: %d\n", res.ID)
+	fmt.Printf("Jogador registrado: %s (ID %d)\n", name, res.ID)
 
-	// Goroutine para escutar o teclado
-	go listenInput(client, res.Player.ID)
-
-	// Loop para atualização do mapa
-	updateMap(client, res.Player.ID)
+	go escutarTeclado(client, res.ID)
+	atualizarMapa(client, res.ID)
 }
 
-func listenInput(client *rpc.Client, playerID int) {
+func escutarTeclado(client *rpc.Client, playerID int) {
 	reader := bufio.NewReader(os.Stdin)
-
 	for {
-		fmt.Print("Digite comando (ex: w, a, s, d): ")
+		fmt.Print("→ ")
 		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
+		input = strings.TrimSpace(strings.ToUpper(input))
 
-		// Aqui você pode enviar comandos ao servidor se desejar
-		fmt.Println("Comando recebido:", input)
+		if input == "W" || input == "A" || input == "S" || input == "D" {
+			var res common.MoveResponse
+			req := common.MoveRequest{PlayerID: playerID, Direction: input}
+			err := client.Call("GameServer.MovePlayer", &req, &res)
+			if err != nil {
+				log.Println("Erro movimentando:", err)
+			}
+		}
 	}
 }
 
-func updateMap(client *rpc.Client, playerID int) {
+func atualizarMapa(client *rpc.Client, playerID int) {
 	for {
 		var state common.GameState
-		req := common.StateRequest{PlayerID: playerID}
-
-		err := client.Call("GameServer.GetState", req, &state)
+		err := client.Call("GameServer.GetState", common.StateRequest{PlayerID: playerID}, &state)
 		if err != nil {
-			log.Println("erro ao obter estado do jogo:", err)
-			time.Sleep(time.Second)
+			log.Println("Erro ao buscar estado:", err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
-
-		renderMap(&state)
-		time.Sleep(500 * time.Millisecond)
+		renderizar(&state)
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 
-func renderMap(state *common.GameState) {
+func renderizar(state *common.GameState) {
 	fmt.Print("\033[H\033[2J")
-
 	for y := 0; y < state.MapHeight; y++ {
 		for x := 0; x < state.MapWidth; x++ {
-			symbol := " "
+			symbol := ' '
+
+			for _, e := range state.Treasures {
+				if e.X == x && e.Y == y {
+					symbol = e.Symbol
+					break
+				}
+			}
+
+			for _, e := range state.Traps {
+				if e.X == x && e.Y == y {
+					symbol = e.Symbol
+					break
+				}
+			}
 
 			for _, p := range state.Players {
 				if p.X == x && p.Y == y {
@@ -79,21 +91,7 @@ func renderMap(state *common.GameState) {
 				}
 			}
 
-			for _, t := range state.Traps {
-				if t.X == x && t.Y == y {
-					symbol = t.Symbol
-					break
-				}
-			}
-
-			for _, t := range state.Treasures {
-				if t.X == x && t.Y == y {
-					symbol = t.Symbol
-					break
-				}
-			}
-
-			fmt.Print(symbol)
+			fmt.Printf("%c", symbol)
 		}
 		fmt.Println()
 	}
