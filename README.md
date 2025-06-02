@@ -1,5 +1,14 @@
-# Servidor
-go run . -server 
+````markdown
+### 🖥️ Rodar o Servidor
 
-# Cliente  
+```bash
+go run . -server
+````
+
+---
+
+### 💻 Rodar o Cliente
+
+```bash
 go run .
+```
