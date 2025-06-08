@@ -9,18 +9,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// GameManager gerencia o estado do jogo localmente
 type GameManager struct {
 	jogo                *Jogo
-	comandosProcessados map[string]int64 // jogadorID -> último sequence number processado
+	jogadorID           string                  // ID do jogador local
+	jogadoresRemotos    map[string]PosicaoJogador // Jogadores remotos
+	comandosProcessados map[string]int64        // jogadorID -> último sequence number processado
 	mutex               sync.RWMutex
 }
 
+// Cria um novo gerenciador de jogo local
 func NewGameManager() *GameManager {
 	return &GameManager{
+		jogadoresRemotos:    make(map[string]PosicaoJogador),
 		comandosProcessados: make(map[string]int64),
 	}
 }
 
+// Inicializa o jogo local com o mapa fornecido
 func (gm *GameManager) InicializarJogo(mapaFile string) error {
 	gm.mutex.Lock()
 	defer gm.mutex.Unlock()
@@ -45,101 +51,85 @@ func (gm *GameManager) InicializarJogo(mapaFile string) error {
 	return nil
 }
 
-func (gm *GameManager) ConectarJogador(mapaFile string) (*Jogador, *EstadoJogo, error) {
+// Cria um jogador local com as informações recebidas do servidor
+func (gm *GameManager) CriarJogadorLocal(jogadorID string, nome string, posX, posY int, cor Cor) *Jogador {
 	gm.mutex.Lock()
 	defer gm.mutex.Unlock()
 
-	// Inicializar jogo se necessário
+	// Verifica se o jogo foi inicializado
 	if gm.jogo == nil {
-		if err := gm.inicializarJogoInterno(mapaFile); err != nil {
-			return nil, nil, err
-		}
+		gm.InicializarJogo("mapa.txt") // Usa o mapa padrão se não tiver sido inicializado
 	}
-
-	// Criar novo jogador
-	jogadorID := uuid.New().String()
-	corIndex := len(gm.jogo.Jogadores) % len(CoresJogadores)
-
-	// Encontrar posição inicial livre
-	posX, posY := gm.encontrarPosicaoLivre()
 
 	jogador := &Jogador{
 		ID:        jogadorID,
-		Nome:      fmt.Sprintf("Jogador%d", len(gm.jogo.Jogadores)+1),
+		Nome:      nome,
 		PosX:      posX,
 		PosY:      posY,
-		Cor:       CoresJogadores[corIndex],
+		Cor:       cor,
 		Simbolo:   '☺',
 		Conectado: true,
 	}
 
+	// Armazena o jogador no jogo local
 	gm.jogo.Jogadores[jogadorID] = jogador
+	gm.jogadorID = jogadorID
 	gm.comandosProcessados[jogadorID] = 0
 
-	estado := &EstadoJogo{
-		Mapa:      gm.jogo.Mapa,
-		Jogadores: gm.copiarJogadores(),
-		StatusMsg: fmt.Sprintf("%s conectou-se ao jogo", jogador.Nome),
-	}
-
-	gm.jogo.StatusMsg = estado.StatusMsg
-	return jogador, estado, nil
+	return jogador
 }
 
-func (gm *GameManager) inicializarJogoInterno(mapaFile string) error {
-	id := uuid.New().String()
-	jogo := &Jogo{
-		ID:             id,
-		Jogadores:      make(map[string]*Jogador),
-		UltimoVisitado: Vazio,
-		StatusMsg:      "Jogo multiplayer iniciado",
-	}
-
-	if err := CarregarMapa(mapaFile, jogo); err != nil {
-		return fmt.Errorf("erro ao carregar mapa: %v", err)
-	}
-
-	gm.jogo = jogo
-	return nil
-}
-
-func (gm *GameManager) encontrarPosicaoLivre() (int, int) {
-	if gm.jogo == nil || len(gm.jogo.Mapa) == 0 {
-		return 1, 1
-	}
-
-	// Procurar por uma posição livre no mapa
-	for y := 1; y < len(gm.jogo.Mapa)-1; y++ {
-		for x := 1; x < len(gm.jogo.Mapa[y])-1; x++ {
-			if !gm.jogo.Mapa[y][x].Tangivel && !gm.posicaoOcupada(x, y) {
-				return x, y
-			}
-		}
-	}
-	return 1, 1 // Fallback
-}
-
-func (gm *GameManager) posicaoOcupada(x, y int) bool {
-	for _, jogador := range gm.jogo.Jogadores {
-		if jogador.PosX == x && jogador.PosY == y && jogador.Conectado {
-			return true
-		}
-	}
-	return false
-}
-
-func (gm *GameManager) MoverJogador(jogadorID string, tecla rune, sequenceNumber int64) (*EstadoJogo, error) {
+// Atualiza as posições dos jogadores remotos no jogo local
+func (gm *GameManager) AtualizarJogadoresRemotos(posicoes map[string]PosicaoJogador) {
 	gm.mutex.Lock()
 	defer gm.mutex.Unlock()
 
-	// Verificar execução única
-	if gm.comandosProcessados[jogadorID] >= sequenceNumber {
-		// Comando já processado, retornar estado atual
-		return gm.obterEstadoAtual(), nil
+	// Guarda as posições remotas
+	gm.jogadoresRemotos = posicoes
+
+	// Se o jogo não estiver inicializado, não faz nada
+	if gm.jogo == nil {
+		return
 	}
 
-	jogador, exists := gm.jogo.Jogadores[jogadorID]
-	if !exists || !jogador.Conectado {
+	// Atualiza os jogadores no jogo local
+	for id, posicao := range posicoes {
+		// Não atualiza o jogador local
+		if id == gm.jogadorID {
+			continue
+		}
+
+		// Cria ou atualiza o jogador remoto no jogo local
+		jogador, existe := gm.jogo.Jogadores[id]
+		if !existe {
+			jogador = &Jogador{
+				ID:        posicao.ID,
+				Nome:      posicao.Nome,
+				Cor:       posicao.Cor,
+				Simbolo:   posicao.Simbolo,
+				Conectado: posicao.Conectado,
+			}
+			gm.jogo.Jogadores[id] = jogador
+		}
+
+		// Atualiza a posição do jogador remoto
+		jogador.PosX = posicao.PosX
+		jogador.PosY = posicao.PosY
+		jogador.Conectado = posicao.Conectado
+	}
+}
+
+// Atualiza a posição do jogador local no jogo
+func (gm *GameManager) MoverJogadorLocal(tecla rune) (*EstadoJogo, error) {
+	gm.mutex.Lock()
+	defer gm.mutex.Unlock()
+
+	if gm.jogo == nil || gm.jogadorID == "" {
+		return nil, fmt.Errorf("jogo não inicializado ou jogador local não definido")
+	}
+
+	jogador, existe := gm.jogo.Jogadores[gm.jogadorID]
+	if !existe || !jogador.Conectado {
 		return nil, fmt.Errorf("jogador não encontrado ou desconectado")
 	}
 
@@ -158,39 +148,51 @@ func (gm *GameManager) MoverJogador(jogadorID string, tecla rune, sequenceNumber
 	}
 
 	nx, ny := jogador.PosX+dx, jogador.PosY+dy
-	if gm.podeMover(nx, ny, jogadorID) {
-		jogador.PosX, jogador.PosY = nx, ny
-		gm.jogo.StatusMsg = fmt.Sprintf("%s moveu para (%d, %d)", jogador.Nome, nx, ny)
-		gm.comandosProcessados[jogadorID] = sequenceNumber
+	if gm.podeMover(nx, ny, gm.jogadorID) {
+		jogador.PosX = nx
+		jogador.PosY = ny
+		gm.jogo.StatusMsg = fmt.Sprintf("Você moveu para (%d, %d)", nx, ny)
 	} else {
-		gm.jogo.StatusMsg = fmt.Sprintf("%s: movimento bloqueado!", jogador.Nome)
+		gm.jogo.StatusMsg = "Movimento bloqueado!"
 	}
 
 	return gm.obterEstadoAtual(), nil
 }
 
+// Verifica se o jogador pode se mover para a posição especificada
 func (gm *GameManager) podeMover(x, y int, jogadorID string) bool {
+	if gm.jogo == nil {
+		return false
+	}
+
+	// Verifica limites do mapa
 	if y < 0 || y >= len(gm.jogo.Mapa) || x < 0 || x >= len(gm.jogo.Mapa[y]) {
 		return false
 	}
+	
+	// Verifica colisão com elementos do mapa
 	if gm.jogo.Mapa[y][x].Tangivel {
 		return false
 	}
-	// Verificar se há outro jogador na posição
+	
+	// Verifica colisão com outros jogadores
 	for id, jogador := range gm.jogo.Jogadores {
 		if id != jogadorID && jogador.PosX == x && jogador.PosY == y && jogador.Conectado {
 			return false
 		}
 	}
+	
 	return true
 }
 
+// Obtém o estado atual do jogo local
 func (gm *GameManager) ObterEstado() *EstadoJogo {
 	gm.mutex.RLock()
 	defer gm.mutex.RUnlock()
 	return gm.obterEstadoAtual()
 }
 
+// Obtém o estado atual do jogo local (sem lock)
 func (gm *GameManager) obterEstadoAtual() *EstadoJogo {
 	if gm.jogo == nil {
 		return &EstadoJogo{
@@ -206,6 +208,7 @@ func (gm *GameManager) obterEstadoAtual() *EstadoJogo {
 	}
 }
 
+// Copia os jogadores para evitar problemas de concorrência
 func (gm *GameManager) copiarJogadores() map[string]*Jogador {
 	copia := make(map[string]*Jogador)
 	for id, jogador := range gm.jogo.Jogadores {
@@ -224,16 +227,7 @@ func (gm *GameManager) copiarJogadores() map[string]*Jogador {
 	return copia
 }
 
-func (gm *GameManager) DesconectarJogador(jogadorID string) {
-	gm.mutex.Lock()
-	defer gm.mutex.Unlock()
-
-	if jogador, exists := gm.jogo.Jogadores[jogadorID]; exists {
-		jogador.Conectado = false
-		gm.jogo.StatusMsg = fmt.Sprintf("%s desconectou-se", jogador.Nome)
-	}
-}
-
+// Carrega o mapa do arquivo especificado
 func CarregarMapa(nome string, jogo *Jogo) error {
 	arq, err := os.Open(nome)
 	if err != nil {
@@ -262,11 +256,4 @@ func CarregarMapa(nome string, jogo *Jogo) error {
 		y++
 	}
 	return scanner.Err()
-}
-
-func PodeMover(jogo *Jogo, x, y int) bool {
-	if y < 0 || y >= len(jogo.Mapa) || x < 0 || x >= len(jogo.Mapa[y]) {
-		return false
-	}
-	return !jogo.Mapa[y][x].Tangivel
 }
