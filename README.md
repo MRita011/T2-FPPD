@@ -1,5 +1,8 @@
 ### 🖥️ Rodar o Servidor
 
+---
+
+
 ```bash
 go run . -server
 ```

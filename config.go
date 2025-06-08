@@ -6,24 +6,23 @@ import "fmt"
 type NetworkConfig struct {
 	Host           string // ip ou nome do host (ex: localhost)
 	Port           string // porta usada pra conectar
-	DefaultMapFile string // nome do arquivo de mapa que será usado por padrão
+	DefaultMapFile string // nome do arq/mapa padrão
 }
 
-// aqui ficam algumas configurações prontas pra usar
+// multiplayer: utilizamos o ip de uma das maquinas
 var (
-	// essa é a config padrão que o sistema usa se não passar outra
 	DefaultConfig = NetworkConfig{
-		Host:           "localhost",
+		Host:           "192.168.29.120", // ip do luis
 		Port:           "8080",
 		DefaultMapFile: "mapa.txt",
 	}
 
-	// outra config que pode ser usada localmente
-	LocalConfig = NetworkConfig{
-		Host:           "127.0.0.1",
-		Port:           "3000",
+	// singleplayer: usamos o localhost
+	/*LocalConfig = NetworkConfig{
+		Host:           "localhost",
+		Port:           "8080",
 		DefaultMapFile: "mapa.txt",
-	}
+	}*/
 )
 
 // pega o endereço completo (ip + porta) pra se conectar no servidor
