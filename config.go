@@ -18,11 +18,11 @@ var (
 	}
 
 	// singleplayer: usamos o localhost
-	/*LocalConfig = NetworkConfig{
+	LocalConfig = NetworkConfig{
 		Host:           "localhost",
 		Port:           "8080",
 		DefaultMapFile: "mapa.txt",
-	}*/
+	}
 )
 
 // pega o endereço completo (ip + porta) pra se conectar no servidor
