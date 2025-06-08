@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	// verifica se foi passado o argumento "--server"
+	// Verifica se foi passado o argumento "--server"
 	servidor := flag.Bool("server", false, "Servidor")
 	flag.Parse() // processa os argumentos da linha de comando
 
@@ -17,34 +17,38 @@ func main() {
 	}
 }
 
-// iniciar o servidor
+// Iniciar o servidor de posições dos jogadores
 func runServidor() {
 	server := NewGameServer()
-	log.Println("Servidor iniciado na porta 8080")
-	log.Fatal(server.StartRPC("8080")) // inicia o servidor rpc e encerra se der erro
+	log.Println("Servidor de posições iniciado na porta 8080")
+	log.Fatal(server.StartRPC("8080")) // inicia o servidor e encerra se der erro
 }
 
-// iniciar cliente
+// Iniciar cliente
 func runCliente() {
 	IniciarInterface()
 	defer FinalizarInterface()
 
+	log.Println("Iniciando cliente...")
 	client, err := NewGameClient() // tenta criar um novo cliente
 	if err != nil {
 		log.Fatal("Erro ao conectar:", err)
 	}
 	defer client.Close()
 
-	// conecta o jogador no servidor e pega o id dele
+	// Conecta ao servidor e carrega o jogo local
+	log.Println("Conectando ao jogo...")
 	jogadorID, err := client.ConectarJogo("mapa.txt")
 	if err != nil {
 		log.Fatal("Erro ao conectar ao jogo:", err) // se não conseguir conectar, finaliza
 	}
+	log.Println("Conectado com sucesso! ID:", jogadorID)
 
-	client.IniciarSincronizacao(jogadorID) // começa a sincronizar o estado do jogo com o servidor
+	// Começa a sincronizar estado com o servidor
+	client.IniciarSincronizacao(jogadorID)
 	defer client.PararSincronizacao()
 
-	// loop principal do jogo
+	// Loop principal do jogo
 	for {
 		evento := LerEvento() // lê o que o jogador apertou
 
@@ -52,7 +56,7 @@ func runCliente() {
 			break // se apertou esc, sai do jogo
 		}
 		if evento.Tipo == "mover" {
-			client.Mover(jogadorID, evento.Tecla) // se apertou wasd, envia o movimento pro servidor
+			client.Mover(jogadorID, evento.Tecla) // envia o movimento pro servidor
 		}
 	}
 }

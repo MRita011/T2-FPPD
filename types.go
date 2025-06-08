@@ -44,6 +44,24 @@ type EstadoJogo struct {
 	StatusMsg string              // mensagem de status que aparece na tela
 }
 
+// Nova estrutura para armazenar apenas as posições dos jogadores
+type PosicoesJogadores struct {
+	Jogadores        map[string]PosicaoJogador // posições de todos os jogadores
+	JogadorID        string                    // id do jogador atual
+	UltimoProcessado int64                     // último comando processado
+}
+
+// Estrutura minimalista para representar a posição de um jogador
+type PosicaoJogador struct {
+	ID        string // id único do jogador
+	Nome      string // nome do jogador
+	PosX      int    // posição x no mapa
+	PosY      int    // posição y no mapa
+	Cor       Cor    // cor do jogador
+	Simbolo   rune   // símbolo que representa o jogador
+	Conectado bool   // se está conectado ou não
+}
+
 // estrutura que representa o jogo no servidor
 type Jogo struct {
 	ID             string
@@ -76,12 +94,19 @@ type MoverRequest struct {
 // estrutura usada quando o jogador se conecta
 type ConectarRequest struct {
 	MapaFile string // arquivo do mapa que o cliente quer usar
+	Nome     string // nome do jogador que está se conectando
 }
 
 // resposta do servidor quando o jogador se conecta
 type ConectarResponse struct {
 	JogadorID string     // id que o servidor gerou pro jogador
 	Estado    EstadoJogo // estado atual do jogo que o cliente vai receber
+}
+
+// Nova estrutura para resposta do servidor com apenas as posições
+type ConectarPosicaoResponse struct {
+	JogadorID string           // id que o servidor gerou pro jogador
+	Posicoes  PosicoesJogadores // posições dos jogadores
 }
 
 var (
