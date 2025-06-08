@@ -11,9 +11,9 @@ import (
 
 // Servidor que gerencia apenas as posições dos jogadores
 type GameServer struct {
-	jogadores      map[string]PosicaoJogador  // mapa com todas as posições dos jogadores
-	processados    map[string]int64           // jogadorID -> último sequence number processado
-	mutex          sync.RWMutex               // trava de sincronização
+	jogadores   map[string]PosicaoJogador // mapa com todas as posições dos jogadores
+	processados map[string]int64          // jogadorID -> último sequence number processado
+	mutex       sync.RWMutex              // trava de sincronização
 }
 
 // Serviço RPC para comunicação com clientes
@@ -60,13 +60,13 @@ func (gs *GameService) ConectarJogo(req ConectarRequest, reply *ConectarPosicaoR
 
 	// Cria um novo ID para o jogador
 	jogadorID := uuid.New().String()
-	
+
 	// Determina a cor do jogador baseado na quantidade atual de jogadores
 	corIndex := len(gs.servidor.jogadores) % len(CoresJogadores)
-	
+
 	// Encontra uma posição inicial (simplificada)
 	posX, posY := 5+len(gs.servidor.jogadores)*2, 5+len(gs.servidor.jogadores)*2
-	
+
 	// Cria novo jogador com as informações básicas
 	novoJogador := PosicaoJogador{
 		ID:        jogadorID,
@@ -77,21 +77,21 @@ func (gs *GameService) ConectarJogo(req ConectarRequest, reply *ConectarPosicaoR
 		Simbolo:   '☺',
 		Conectado: true,
 	}
-	
+
 	// Adiciona o jogador ao mapa de posições
 	gs.servidor.jogadores[jogadorID] = novoJogador
 	gs.servidor.processados[jogadorID] = 0
-	
+
 	// Prepara a resposta para o cliente
 	posicoes := PosicoesJogadores{
 		Jogadores:        gs.servidor.copiarPosicoes(),
 		JogadorID:        jogadorID,
 		UltimoProcessado: 0,
 	}
-	
+
 	reply.JogadorID = jogadorID
 	reply.Posicoes = posicoes
-	
+
 	log.Printf("Jogador %s conectado (%s)", novoJogador.Nome, jogadorID)
 	return nil
 }
@@ -100,7 +100,7 @@ func (gs *GameService) ConectarJogo(req ConectarRequest, reply *ConectarPosicaoR
 func (gs *GameService) Mover(req MoverRequest, reply *PosicoesJogadores) error {
 	gs.servidor.mutex.Lock()
 	defer gs.servidor.mutex.Unlock()
-	
+
 	// Verifica se esse comando já foi processado
 	if gs.servidor.processados[req.JogadorID] >= req.SequenceNumber {
 		*reply = PosicoesJogadores{
@@ -110,13 +110,13 @@ func (gs *GameService) Mover(req MoverRequest, reply *PosicoesJogadores) error {
 		}
 		return nil
 	}
-	
+
 	// Busca o jogador que está se movendo
 	jogador, existe := gs.servidor.jogadores[req.JogadorID]
 	if !existe || !jogador.Conectado {
 		return nil
 	}
-	
+
 	// Calcula direção do movimento
 	dx, dy := 0, 0
 	switch req.Tecla {
@@ -136,25 +136,25 @@ func (gs *GameService) Mover(req MoverRequest, reply *PosicoesJogadores) error {
 		}
 		return nil
 	}
-	
+
 	// Calcula nova posição
 	nx, ny := jogador.PosX+dx, jogador.PosY+dy
-	
+
 	// Faz o movimento
 	jogador.PosX = nx
 	jogador.PosY = ny
 	gs.servidor.jogadores[req.JogadorID] = jogador
-	
+
 	// Atualiza o processamento
 	gs.servidor.processados[req.JogadorID] = req.SequenceNumber
-	
+
 	// Prepara a resposta com posições atualizadas
 	*reply = PosicoesJogadores{
 		Jogadores:        gs.servidor.copiarPosicoes(),
 		JogadorID:        req.JogadorID,
 		UltimoProcessado: req.SequenceNumber,
 	}
-	
+
 	return nil
 }
 
@@ -162,14 +162,14 @@ func (gs *GameService) Mover(req MoverRequest, reply *PosicoesJogadores) error {
 func (gs *GameService) ObterPosicoes(jogadorID string, reply *PosicoesJogadores) error {
 	gs.servidor.mutex.RLock()
 	defer gs.servidor.mutex.RUnlock()
-	
+
 	// Prepara a resposta com todas as posições atuais
 	*reply = PosicoesJogadores{
 		Jogadores:        gs.servidor.copiarPosicoes(),
 		JogadorID:        jogadorID,
 		UltimoProcessado: gs.servidor.processados[jogadorID],
 	}
-	
+
 	return nil
 }
 
@@ -188,13 +188,13 @@ func (gs *GameServer) copiarPosicoes() map[string]PosicaoJogador {
 func (gs *GameService) Desconectar(jogadorID string, reply *bool) error {
 	gs.servidor.mutex.Lock()
 	defer gs.servidor.mutex.Unlock()
-	
+
 	if jogador, existe := gs.servidor.jogadores[jogadorID]; existe {
-		jogador.Conectado = false
-		gs.servidor.jogadores[jogadorID] = jogador
 		log.Printf("Jogador %s (%s) desconectado", jogador.Nome, jogadorID)
+		delete(gs.servidor.jogadores, jogadorID)   // remove o jogador do mapa
+		delete(gs.servidor.processados, jogadorID) // remove o processamento
 	}
-	
+
 	*reply = true
 	return nil
 }
