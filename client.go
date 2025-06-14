@@ -145,14 +145,20 @@ func (gc *GameClient) Interagir(jogadorID string) error {
 	if err := gc.client.Call("GameService.InteragirCaixa", req, &resp); err != nil {
 		return err
 	}
-	// atualiza mapa de caixas e deixa mensagem de status
+
+	// atualiza o mapa de caixas
 	gc.gameManager.AtualizarCaixas(resp.Caixas)
-	if resp.Tipo == Tesouro {
+
+	// verifica o tipo de caixa encontrada e att a mensagem
+	switch resp.Tipo {
+	case Tesouro:
 		gc.gameManager.jogo.StatusMsg = "Você encontrou um TESOURO!"
-	} else if resp.Tipo == Armadilha {
+	case Armadilha:
 		gc.gameManager.jogo.StatusMsg = "Você ativou uma ARMADILHA!"
-	} else {
+	case "":
 		gc.gameManager.jogo.StatusMsg = "Nada a interagir aqui."
+	default:
+		gc.gameManager.jogo.StatusMsg = "Nem eu sei o que é isso!"
 	}
 	return nil
 }

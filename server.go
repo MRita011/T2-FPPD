@@ -236,26 +236,46 @@ func (gs *GameService) InteragirCaixa(req InteragirRequest, reply *InteragirResp
 		return fmt.Errorf("jogador não encontrado")
 	}
 
-	// checa cada adjacente
+	// tem uma caixa na posição do jogador?
+	posAtual := Coordenada{pj.PosX, pj.PosY}
+	if t, ok := caixasGlobal[posAtual]; ok {
+		reply.Tipo = t                 // tipo da caixa encontrada
+		delete(caixasGlobal, posAtual) // remove a caixa
+
+		// copia o mapa de caixas atualizado
+		copia := make(map[Coordenada]TipoCaixa, len(caixasGlobal))
+		for c, t := range caixasGlobal {
+			copia[c] = t
+		}
+		reply.Caixas = copia
+		return nil
+	}
+
+	// se não tiver caixas na pos atual, checa cada adjacente
 	adj := []Coordenada{
 		{pj.PosX + 1, pj.PosY},
 		{pj.PosX - 1, pj.PosY},
 		{pj.PosX, pj.PosY + 1},
 		{pj.PosX, pj.PosY - 1},
 	}
-	var achadoTipo TipoCaixa
 	for _, c := range adj {
 		if t, ok := caixasGlobal[c]; ok {
-			achadoTipo = t
+			reply.Tipo = t          // tipo da caixa encontrada
 			delete(caixasGlobal, c) // remove a caixa
-			break
+
+			copia := make(map[Coordenada]TipoCaixa, len(caixasGlobal))
+			for coord, tipo := range caixasGlobal {
+				copia[coord] = tipo
+			}
+			reply.Caixas = copia
+			return nil
 		}
 	}
 
-	// preenche resposta
-	reply.Tipo = achadoTipo
+	// nenhuma caixa encontrada
+	reply.Tipo = ""
 
-	// copia o mapa de caixas atualizado
+	// copia o mapa de caixas (sem mudanças)
 	copia := make(map[Coordenada]TipoCaixa, len(caixasGlobal))
 	for c, t := range caixasGlobal {
 		copia[c] = t
