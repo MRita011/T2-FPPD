@@ -19,6 +19,17 @@ const (
 	CorTexto           = termbox.ColorDarkGray
 )
 
+type TipoCaixa string
+
+const (
+	Tesouro   TipoCaixa = "tesouro"
+	Armadilha TipoCaixa = "armadilha"
+)
+
+type Coordenada struct {
+	X, Y int
+}
+
 type Elemento struct {
 	Simbolo  rune
 	Cor      Cor
@@ -39,9 +50,10 @@ type Jogador struct {
 
 // estrutura com o estado atual do jogo que é compartilhado com os clientes
 type EstadoJogo struct {
-	Mapa      [][]Elemento        // o mapa atual com todos os elementos
-	Jogadores map[string]*Jogador // todos os jogadores conectados
-	StatusMsg string              // mensagem de status que aparece na tela
+	Mapa      [][]Elemento             // o mapa atual com todos os elementos
+	Jogadores map[string]*Jogador      // todos os jogadores conectados
+	StatusMsg string                   // mensagem de status que aparece na tela
+	Caixas    map[Coordenada]TipoCaixa // mapa das caixas (tesouros e armadilhas)
 }
 
 // Nova estrutura para armazenar apenas as posições dos jogadores
@@ -49,6 +61,18 @@ type PosicoesJogadores struct {
 	Jogadores        map[string]PosicaoJogador // posições de todos os jogadores
 	JogadorID        string                    // id do jogador atual
 	UltimoProcessado int64                     // último comando processado
+	Caixas           map[Coordenada]TipoCaixa  // caixas no mapa
+}
+
+// Interação com caixas
+type InteragirRequest struct {
+	JogadorID string
+}
+
+// Resposta traz de volta o mapa de caixas atualizado e o tipo que o jogador acabou de revelar
+type InteragirResponse struct {
+	Caixas map[Coordenada]TipoCaixa
+	Tipo   TipoCaixa // Tesouro ou Armadilha
 }
 
 // Estrutura minimalista para representar a posição de um jogador
@@ -105,7 +129,7 @@ type ConectarResponse struct {
 
 // Nova estrutura para resposta do servidor com apenas as posições
 type ConectarPosicaoResponse struct {
-	JogadorID string           // id que o servidor gerou pro jogador
+	JogadorID string            // id que o servidor gerou pro jogador
 	Posicoes  PosicoesJogadores // posições dos jogadores
 }
 

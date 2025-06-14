@@ -26,8 +26,6 @@ func runServidor() {
 
 // Iniciar cliente
 func runCliente() {
-	IniciarInterface()
-	defer FinalizarInterface()
 
 	log.Println("Iniciando cliente...")
 	client, err := NewGameClient() // tenta criar um novo cliente
@@ -44,6 +42,9 @@ func runCliente() {
 	}
 	log.Println("Conectado com sucesso! ID:", jogadorID)
 
+	IniciarInterface()
+	defer FinalizarInterface()
+
 	// Começa a sincronizar estado com o servidor
 	client.IniciarSincronizacao(jogadorID)
 	defer client.PararSincronizacao()
@@ -57,6 +58,9 @@ func runCliente() {
 		}
 		if evento.Tipo == "mover" {
 			client.Mover(jogadorID, evento.Tecla) // envia o movimento pro servidor
+		}
+		if evento.Tipo == "interagir" {
+			client.Interagir(jogadorID)
 		}
 	}
 }

@@ -102,6 +102,7 @@ func (gc *GameClient) ConectarJogo(mapaFile string) (string, error) {
 
 	// Atualiza as posições dos outros jogadores
 	gc.gameManager.AtualizarJogadoresRemotos(resp.Posicoes.Jogadores)
+	gc.gameManager.AtualizarCaixas(resp.Posicoes.Caixas)
 
 	return resp.JogadorID, nil
 }
@@ -131,6 +132,28 @@ func (gc *GameClient) Mover(jogadorID string, tecla rune) error {
 	// Atualiza o estado local com as posições recebidas do servidor
 	gc.gameManager.AtualizarJogadoresRemotos(posicoes.Jogadores)
 
+	// Atualiza o mapa de caixas recebido do servidor
+	gc.gameManager.AtualizarCaixas(posicoes.Caixas)
+
+	return nil
+}
+
+// Interagir com caixa
+func (gc *GameClient) Interagir(jogadorID string) error {
+	req := InteragirRequest{JogadorID: jogadorID}
+	var resp InteragirResponse
+	if err := gc.client.Call("GameService.InteragirCaixa", req, &resp); err != nil {
+		return err
+	}
+	// atualiza mapa de caixas e deixa mensagem de status
+	gc.gameManager.AtualizarCaixas(resp.Caixas)
+	if resp.Tipo == Tesouro {
+		gc.gameManager.jogo.StatusMsg = "Você encontrou um TESOURO!"
+	} else if resp.Tipo == Armadilha {
+		gc.gameManager.jogo.StatusMsg = "Você ativou uma ARMADILHA!"
+	} else {
+		gc.gameManager.jogo.StatusMsg = "Nada a interagir aqui."
+	}
 	return nil
 }
 
@@ -144,6 +167,9 @@ func (gc *GameClient) ObterPosicoes() error {
 
 	// Atualiza o jogo local com as posições mais recentes
 	gc.gameManager.AtualizarJogadoresRemotos(posicoes.Jogadores)
+
+	// Atualiza o mapa de caixas com as informações mais recentes
+	gc.gameManager.AtualizarCaixas(posicoes.Caixas)
 
 	return nil
 }
