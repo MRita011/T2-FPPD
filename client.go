@@ -21,7 +21,7 @@ type GameClient struct {
 
 // Cria um novo cliente com a config padrão
 func NewGameClient() (*GameClient, error) {
-	return NewGameClientWithConfig(LocalConfig)
+	return NewGameClientWithConfig(DefaultConfig)
 }
 
 // Cria um novo cliente com uma config específica
