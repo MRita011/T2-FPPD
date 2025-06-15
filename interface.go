@@ -104,11 +104,11 @@ func DesenharEstadoJogo(estado *EstadoJogo) {
 	}
 
 	if estado.GameOver {
-        gameOverText := "GAME OVER"
-        for i, c := range gameOverText {
-            termbox.SetCell(i, 0, c, termbox.ColorRed, termbox.ColorDefault)
-        }
-    }
+		gameOverText := "GAME OVER"
+		for i, c := range gameOverText {
+			termbox.SetCell(i, 0, c, termbox.ColorRed, termbox.ColorDefault)
+		}
+	}
 
 	// mostra instruções ao jogador
 	instrY := statusY + 2

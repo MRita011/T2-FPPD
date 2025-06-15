@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"log"
-    "time"
+	"time"
 )
 
 func main() {
@@ -57,7 +57,6 @@ func runCliente() {
 	client.IniciarSincronizacao(jogadorID)
 	defer client.PararSincronizacao()
 	var tempoGameOver time.Duration
-    
 
 	// loop principal do jogo no cliente.
 	for {
@@ -85,21 +84,21 @@ func runCliente() {
 			}
 		}
 		estado := client.gameManager.ObterEstado()
-        if estado.GameOver {
-            // Continua desenhando, mas não permite mais movimentos
-            DesenharEstadoJogo(estado)
-            time.Sleep(time.Second) // Pequena pausa para mostrar o GAMEOVER
-            
-            // Incrementa o contador de tempo
-            tempoGameOver += time.Second
-            
-            // Após 5 segundos, encerra o jogo
-            if tempoGameOver >= 5*time.Second {
-                break // Sai do loop do jogo
-            }
-        } else {
-            // Reseta o contador se o jogo não estiver em game over
-            tempoGameOver = 0
-        }
+		if estado.GameOver {
+			// Continua desenhando, mas não permite mais movimentos
+			DesenharEstadoJogo(estado)
+			time.Sleep(time.Second) // Pequena pausa para mostrar o GAMEOVER
+
+			// Incrementa o contador de tempo
+			tempoGameOver += time.Second
+
+			// Após 5 segundos, encerra o jogo
+			if tempoGameOver >= 5*time.Second {
+				break // Sai do loop do jogo
+			}
+		} else {
+			// Reseta o contador se o jogo não estiver em game over
+			tempoGameOver = 0
+		}
 	}
 }

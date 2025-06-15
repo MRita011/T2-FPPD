@@ -24,23 +24,6 @@ type TipoCaixa string
 const (
 	Tesouro   TipoCaixa = "tesouro"
 	Armadilha TipoCaixa = "armadilha"
-	Vazia     TipoCaixa = "vazia"
-)
-
-// limitando as caixas no mapa
-const (
-	TOTAL_CAIXAS     = 20
-	TESOUROS_COUNT   = 12
-	ARMADILHAS_COUNT = 4
-	VAZIAS_COUNT     = 4
-)
-
-type EstadoPartida string
-
-const (
-	EstadoAguardando EstadoPartida = "aguardando"
-	EstadoJogando    EstadoPartida = "jogando"
-	EstadoFinalizado EstadoPartida = "finalizado"
 )
 
 type Coordenada struct {
@@ -64,33 +47,23 @@ type Jogador struct {
 	Simbolo   rune   // símbolo que representa o jogador
 	Conectado bool   // se está conectado ou não
 	GameOver  bool   // se o jogo acabou para esse jogador
-	Pontuacao int    // número de tesouros coletados
-	Morto     bool   // se o jogador morreu por armadilha
 }
 
 // estrutura com o estado atual do jogo que é compartilhado com os clientes
 type EstadoJogo struct {
-	Mapa              [][]Elemento             // o mapa atual com todos os elementos
-	Jogadores         map[string]*Jogador      // todos os jogadores conectados
-	StatusMsg         string                   // mensagem de status que aparece na tela
-	Caixas            map[Coordenada]TipoCaixa // mapa das caixas (tesouros e armadilhas)
-	GameOver          bool                     // indica se o jogo terminou para este jogador
-	EstadoPartida     EstadoPartida            // estado atual da partida
-	Vencedor          string                   // ID do jogador vencedor
-	TesourosRestantes int                      // número de tesouros restantes
-	JogadoresVivos    int                      // número de jogadores ainda vivos
+	Mapa      [][]Elemento             // o mapa atual com todos os elementos
+	Jogadores map[string]*Jogador      // todos os jogadores conectados
+	StatusMsg string                   // mensagem de status que aparece na tela
+	Caixas    map[Coordenada]TipoCaixa // mapa das caixas (tesouros e armadilhas)
+	GameOver  bool                     // indica se o jogo terminou para este jogador
 }
 
 // Nova estrutura para armazenar apenas as posições dos jogadores
 type PosicoesJogadores struct {
-	Jogadores         map[string]PosicaoJogador // posições de todos os jogadores
-	JogadorID         string                    // id do jogador atual
-	UltimoProcessado  int64                     // último comando processado
-	Caixas            map[Coordenada]TipoCaixa  // caixas no mapa
-	EstadoPartida     EstadoPartida             // estado atual da partida
-	Vencedor          string                    // ID do jogador vencedor, se houver
-	TesourosRestantes int                       // tesouros restantes no jogo
-	JogadoresVivos    int                       // jogadores ainda vivos
+	Jogadores        map[string]PosicaoJogador // posições de todos os jogadores
+	JogadorID        string                    // id do jogador atual
+	UltimoProcessado int64                     // último comando processado
+	Caixas           map[Coordenada]TipoCaixa  // caixas no mapa
 }
 
 // Interação com caixas
@@ -100,17 +73,11 @@ type InteragirRequest struct {
 
 // Resposta traz de volta o mapa de caixas atualizado e o tipo que o jogador acabou de revelar
 type InteragirResponse struct {
-	Caixas            map[Coordenada]TipoCaixa
-	Tipo              TipoCaixa     // Tesouro, Armadilha ou Vazia
-	GameOver          bool          // se o jogador morreu
-	EstadoPartida     EstadoPartida // estado atual da partida
-	Vencedor          string        // ID do vencedor, se houver
-	Pontuacao         int           // pontuação atual do jogador
-	TesourosRestantes int           // tesouros restantes
-	JogadoresVivos    int           // jogadores vivos
+	Caixas map[Coordenada]TipoCaixa
+	Tipo   TipoCaixa // Tesouro ou Armadilha
 }
 
-// representar a posição de um jogador
+// Estrutura minimalista para representar a posição de um jogador
 type PosicaoJogador struct {
 	ID        string // id único do jogador
 	Nome      string // nome do jogador
@@ -119,8 +86,6 @@ type PosicaoJogador struct {
 	Cor       Cor    // cor do jogador
 	Simbolo   rune   // símbolo que representa o jogador
 	Conectado bool   // se está conectado ou não
-	Pontuacao int    // pontuação do jogador
-	Morto     bool   // se o jogador está morto
 }
 
 // estrutura que representa o jogo no servidor
