@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -32,6 +33,46 @@ func (gm *GameManager) AtualizarCaixas(novas map[Coordenada]TipoCaixa) {
 	gm.mutex.Lock()
 	defer gm.mutex.Unlock()
 	gm.caixas = novas
+}
+
+func (gm *GameManager) InteragirCaixa(posX, posY int) (TipoCaixa, bool) {
+    gm.mutex.RLock()
+    defer gm.mutex.RUnlock()
+    
+    coord := Coordenada{X: posX, Y: posY}
+	log.Printf("Interagindo com caixa em (%d, %d)", posX, posY)
+    tipoCaixa, existe := gm.caixas[coord]
+    
+    if existe {
+		  if tipoCaixa == Armadilha {
+            gm.mutex.Lock()
+            gm.jogo.GameOver = true
+            gm.jogo.StatusMsg = "Você abriu uma armadilha! GAME OVER!"
+            gm.mutex.Unlock()
+        }else if tipoCaixa == Tesouro {
+			gm.mutex.Lock()
+			gm.jogo.StatusMsg = "Você encontrou um tesouro!"
+			gm.mutex.Unlock()
+        }
+
+        return tipoCaixa, true
+    }
+    
+    // Verifica caixas adjacentes
+    adjacentes := []Coordenada{
+        {X: posX + 1, Y: posY},
+        {X: posX - 1, Y: posY},
+        {X: posX, Y: posY + 1},
+        {X: posX, Y: posY - 1},
+    }
+    
+    for _, adj := range adjacentes {
+        if tipo, ok := gm.caixas[adj]; ok {
+            return tipo, true
+        }
+    }
+    
+    return "", false
 }
 
 // Inicializa o jogo local com o mapa fornecido
@@ -75,7 +116,7 @@ func (gm *GameManager) CriarJogadorLocal(jogadorID string, nome string, posX, po
 		PosX:      posX,
 		PosY:      posY,
 		Cor:       cor,
-		Simbolo:   '☺',
+		Simbolo:   '♟',
 		Conectado: true,
 	}
 
@@ -258,9 +299,11 @@ func CarregarMapa(nome string, jogo *Jogo) error {
 		for _, ch := range linha {
 			e := Vazio
 			switch ch {
+			// case '■':
+			// 	e = Caixa
 			case '▤':
 				e = Parede
-			case '☠':
+			case '♙':
 				e = Inimigo
 			case '♣':
 				e = Vegetacao

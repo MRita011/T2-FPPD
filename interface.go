@@ -50,17 +50,17 @@ func DesenharEstadoJogo(estado *EstadoJogo) {
 	}
 
 	// desenha as caixas (tesouros e armadilhas) usando símbolo ■ em fg colorido
-	for coord, tipo := range estado.Caixas {
+	for coord := range estado.Caixas {
 		// símbolo único para qualquer caixa
 		const caixaRune = '■'
 		// cor padrão do fg
-		fg := CorPadrao
-		switch tipo {
-		case Tesouro:
-			fg = CorVerde
-		case Armadilha:
-			fg = CorVermelho
-		}
+		fg := CorAmarelo
+		// switch tipo {
+		// case Tesouro:
+		// 	fg = CorVerde
+		// case Armadilha:
+		// 	fg = CorVermelho
+		// }
 		// desenha na cor certa, com fundo padrão
 		termbox.SetCell(coord.X, coord.Y, caixaRune, fg, CorPadrao)
 	}
@@ -93,7 +93,7 @@ func DesenharEstadoJogo(estado *EstadoJogo) {
 
 		linha := infoY + 1
 		for _, jogador := range estado.Jogadores {
-			if jogador.Conectado {
+			if jogador.Conectado && !jogador.GameOver {
 				texto := jogador.Nome + " " + string(jogador.Simbolo)
 				for i, c := range texto {
 					termbox.SetCell(i, linha, c, jogador.Cor, CorPadrao)
@@ -102,6 +102,13 @@ func DesenharEstadoJogo(estado *EstadoJogo) {
 			}
 		}
 	}
+
+	if estado.GameOver {
+        gameOverText := "GAME OVER"
+        for i, c := range gameOverText {
+            termbox.SetCell(i, 0, c, termbox.ColorRed, termbox.ColorDefault)
+        }
+    }
 
 	// mostra instruções ao jogador
 	instrY := statusY + 2

@@ -46,6 +46,7 @@ type Jogador struct {
 	Cor       Cor    // cor do jogador
 	Simbolo   rune   // símbolo que representa o jogador
 	Conectado bool   // se está conectado ou não
+	GameOver  bool   // se o jogo acabou para esse jogador
 }
 
 // estrutura com o estado atual do jogo que é compartilhado com os clientes
@@ -54,6 +55,7 @@ type EstadoJogo struct {
 	Jogadores map[string]*Jogador      // todos os jogadores conectados
 	StatusMsg string                   // mensagem de status que aparece na tela
 	Caixas    map[Coordenada]TipoCaixa // mapa das caixas (tesouros e armadilhas)
+    GameOver       bool     // indica se o jogo terminou para este jogador
 }
 
 // Nova estrutura para armazenar apenas as posições dos jogadores
@@ -93,6 +95,7 @@ type Jogo struct {
 	Jogadores      map[string]*Jogador
 	UltimoVisitado Elemento // guarda o último elemento que o jogador pisou
 	StatusMsg      string
+    GameOver       bool     // indica se o jogo terminou para este jogador
 }
 
 type EventoTeclado struct {
@@ -134,8 +137,9 @@ type ConectarPosicaoResponse struct {
 }
 
 var (
-	Personagem = Elemento{'☺', CorBranco, CorPadrao, true}      // jogador
-	Inimigo    = Elemento{'☠', CorVermelho, CorPadrao, true}    // inimigo
+	// Caixa      = Elemento{'■', CorPadrao, CorPadrao, false} // caixa genérica (tesouro ou armadilha)
+	Personagem = Elemento{'♟', CorBranco, CorPadrao, true}      // jogador
+	Inimigo    = Elemento{'♙', CorVermelho, CorPadrao, true}    // inimigo
 	Parede     = Elemento{'▤', CorParede, CorFundoParede, true} // parede
 	Vegetacao  = Elemento{'♣', CorVerde, CorPadrao, false}      // vegetação (não colide)
 	Vazio      = Elemento{' ', CorPadrao, CorPadrao, false}     // espaço vazio
