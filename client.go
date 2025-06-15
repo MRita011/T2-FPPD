@@ -153,19 +153,19 @@ func (gc *GameClient) Interagir(jogadorID string) error {
 	switch resp.Tipo {
 	case Tesouro:
 		gc.gameManager.jogo.UltimoVisitado = Elemento{
-			Simbolo:   '■',
-			Cor:       CorVerde,
+			Simbolo: '■',
+			Cor:     CorVerde,
 		}
 		gc.gameManager.jogo.StatusMsg = "Você encontrou um TESOURO!"
 	case Armadilha:
 		gc.gameManager.mutex.Lock()
 		gc.gameManager.jogo.UltimoVisitado = Elemento{
-			Simbolo:   '■',
-			Cor:       CorVermelho,
+			Simbolo: '■',
+			Cor:     CorVermelho,
 		}
-        gc.gameManager.jogo.GameOver = true
-        gc.gameManager.jogo.StatusMsg = "Você ativou uma ARMADILHA! GAME OVER!"
-        gc.gameManager.mutex.Unlock()
+		gc.gameManager.jogo.GameOver = true
+		gc.gameManager.jogo.StatusMsg = "Você ativou uma ARMADILHA! GAME OVER!"
+		gc.gameManager.mutex.Unlock()
 		//Perguntar se o jogador que esperar uma nova partida começar ou sair
 		gc.gameManager.jogo.StatusMsg += " Pressione 'ESC' para sair ou aguarde uma nova partida."
 	case "":
