@@ -1,19 +1,28 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/rpc"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-// Servidor que gerencia apenas as posições dos jogadores
+// armazena globalmente as caixas (tesouros e armadilhas)
+var caixasGlobal = make(map[Coordenada]TipoCaixa)
+
+// Servidor que gerencia o estado do jogo, sendo as posições dos jogadores e caixas no jogo
 type GameServer struct {
 	jogadores   map[string]PosicaoJogador // mapa com todas as posições dos jogadores
 	processados map[string]int64          // jogadorID -> último sequence number processado
+	caixas      map[Coordenada]TipoCaixa  // mapa de caixas (tesouros e armadilhas)
 	mutex       sync.RWMutex              // trava de sincronização
+	// estadoPartida EstadoPartida           // estado atual da partida
+	// vencedor    string                     // ID do jogador vencedor, se houver
 }
 
 // Serviço RPC para comunicação com clientes
@@ -26,6 +35,8 @@ func NewGameServer() *GameServer {
 	return &GameServer{
 		jogadores:   make(map[string]PosicaoJogador),
 		processados: make(map[string]int64),
+		caixas:      make(map[Coordenada]TipoCaixa),
+		mutex:       sync.RWMutex{},
 	}
 }
 
@@ -74,7 +85,7 @@ func (gs *GameService) ConectarJogo(req ConectarRequest, reply *ConectarPosicaoR
 		PosX:      posX,
 		PosY:      posY,
 		Cor:       CoresJogadores[corIndex],
-		Simbolo:   '☺',
+		Simbolo:   '♟',
 		Conectado: true,
 	}
 
@@ -82,11 +93,47 @@ func (gs *GameService) ConectarJogo(req ConectarRequest, reply *ConectarPosicaoR
 	gs.servidor.jogadores[jogadorID] = novoJogador
 	gs.servidor.processados[jogadorID] = 0
 
+	// Re-distribui caixas apenas em células VAZIAS ───
+	caixasGlobal = make(map[Coordenada]TipoCaixa)
+	log.Printf("Redistribuindo caixas no mapa para o novo jogador %s (%s)", novoJogador.Nome, jogadorID)
+	var srvJogo Jogo
+	if err := CarregarMapa("mapa.txt", &srvJogo); err != nil {
+		return fmt.Errorf("falha ao carregar mapa: %v", err)
+	}
+	// coletar todas as vagas
+	var vagas []Coordenada
+	for y, linha := range srvJogo.Mapa {
+		for x, elem := range linha {
+			if elem == Vazio {
+				vagas = append(vagas, Coordenada{x, y})
+			}
+		}
+	}
+
+	n := len(gs.servidor.jogadores)
+	nArm, nTes := n, 3*n+1
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(vagas), func(i, j int) { vagas[i], vagas[j] = vagas[j], vagas[i] })
+
+	// preencher as armadilhas e depois os tesouros
+	for i := 0; i < len(vagas) && i < nArm; i++ {
+		caixasGlobal[vagas[i]] = Armadilha
+	}
+	for i := nArm; i < len(vagas) && i < nArm+nTes; i++ {
+		caixasGlobal[vagas[i]] = Tesouro
+	}
+
+	log.Printf("Caixas redistribuídas: %d armadilhas, %d tesouros", nArm, nTes)
+	log.Printf("Total de caixas no mapa: %d", len(caixasGlobal))
+	log.Printf("Posições das caixas: %v", caixasGlobal)
+
 	// Prepara a resposta para o cliente
 	posicoes := PosicoesJogadores{
 		Jogadores:        gs.servidor.copiarPosicoes(),
 		JogadorID:        jogadorID,
 		UltimoProcessado: 0,
+		Caixas:           caixasGlobal,
 	}
 
 	reply.JogadorID = jogadorID
@@ -107,6 +154,7 @@ func (gs *GameService) Mover(req MoverRequest, reply *PosicoesJogadores) error {
 			Jogadores:        gs.servidor.copiarPosicoes(),
 			JogadorID:        req.JogadorID,
 			UltimoProcessado: gs.servidor.processados[req.JogadorID],
+			Caixas:           caixasGlobal,
 		}
 		return nil
 	}
@@ -133,6 +181,7 @@ func (gs *GameService) Mover(req MoverRequest, reply *PosicoesJogadores) error {
 			Jogadores:        gs.servidor.copiarPosicoes(),
 			JogadorID:        req.JogadorID,
 			UltimoProcessado: gs.servidor.processados[req.JogadorID],
+			Caixas:           caixasGlobal,
 		}
 		return nil
 	}
@@ -153,6 +202,7 @@ func (gs *GameService) Mover(req MoverRequest, reply *PosicoesJogadores) error {
 		Jogadores:        gs.servidor.copiarPosicoes(),
 		JogadorID:        req.JogadorID,
 		UltimoProcessado: req.SequenceNumber,
+		Caixas:           caixasGlobal,
 	}
 
 	return nil
@@ -168,6 +218,7 @@ func (gs *GameService) ObterPosicoes(jogadorID string, reply *PosicoesJogadores)
 		Jogadores:        gs.servidor.copiarPosicoes(),
 		JogadorID:        jogadorID,
 		UltimoProcessado: gs.servidor.processados[jogadorID],
+		Caixas:           caixasGlobal,
 	}
 
 	return nil
@@ -182,6 +233,65 @@ func (gs *GameServer) copiarPosicoes() map[string]PosicaoJogador {
 		}
 	}
 	return copia
+}
+
+// Interagir com caixa
+func (gs *GameService) InteragirCaixa(req InteragirRequest, reply *InteragirResponse) error {
+	gs.servidor.mutex.Lock()
+	defer gs.servidor.mutex.Unlock()
+
+	// encontra posição do jogador
+	pj, existe := gs.servidor.jogadores[req.JogadorID]
+	if !existe {
+		return fmt.Errorf("jogador não encontrado")
+	}
+
+	// tem uma caixa na posição do jogador?
+	posAtual := Coordenada{pj.PosX, pj.PosY}
+	if t, ok := caixasGlobal[posAtual]; ok {
+		reply.Tipo = t                 // tipo da caixa encontrada
+		delete(caixasGlobal, posAtual) // remove a caixa
+
+		// copia o mapa de caixas atualizado
+		copia := make(map[Coordenada]TipoCaixa, len(caixasGlobal))
+		for c, t := range caixasGlobal {
+			copia[c] = t
+		}
+		reply.Caixas = copia
+		return nil
+	}
+
+	// se não tiver caixas na pos atual, checa cada adjacente
+	adj := []Coordenada{
+		{pj.PosX + 1, pj.PosY},
+		{pj.PosX - 1, pj.PosY},
+		{pj.PosX, pj.PosY + 1},
+		{pj.PosX, pj.PosY - 1},
+	}
+	for _, c := range adj {
+		if t, ok := caixasGlobal[c]; ok {
+			reply.Tipo = t          // tipo da caixa encontrada
+			delete(caixasGlobal, c) // remove a caixa
+
+			copia := make(map[Coordenada]TipoCaixa, len(caixasGlobal))
+			for coord, tipo := range caixasGlobal {
+				copia[coord] = tipo
+			}
+			reply.Caixas = copia
+			return nil
+		}
+	}
+
+	// nenhuma caixa encontrada
+	reply.Tipo = ""
+
+	// copia o mapa de caixas (sem mudanças)
+	copia := make(map[Coordenada]TipoCaixa, len(caixasGlobal))
+	for c, t := range caixasGlobal {
+		copia[c] = t
+	}
+	reply.Caixas = copia
+	return nil
 }
 
 // RPC: Jogador se desconecta

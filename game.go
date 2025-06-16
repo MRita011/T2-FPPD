@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -12,9 +13,10 @@ import (
 // GameManager gerencia o estado do jogo localmente
 type GameManager struct {
 	jogo                *Jogo
-	jogadorID           string                  // ID do jogador local
+	jogadorID           string                    // ID do jogador local
 	jogadoresRemotos    map[string]PosicaoJogador // Jogadores remotos
-	comandosProcessados map[string]int64        // jogadorID -> último sequence number processado
+	comandosProcessados map[string]int64          // jogadorID -> último sequence number processado
+	caixas              map[Coordenada]TipoCaixa  // Caixas no mapa
 	mutex               sync.RWMutex
 }
 
@@ -23,7 +25,54 @@ func NewGameManager() *GameManager {
 	return &GameManager{
 		jogadoresRemotos:    make(map[string]PosicaoJogador),
 		comandosProcessados: make(map[string]int64),
+		caixas:              make(map[Coordenada]TipoCaixa),
 	}
+}
+
+func (gm *GameManager) AtualizarCaixas(novas map[Coordenada]TipoCaixa) {
+	gm.mutex.Lock()
+	defer gm.mutex.Unlock()
+	gm.caixas = novas
+}
+
+func (gm *GameManager) InteragirCaixa(posX, posY int) (TipoCaixa, bool) {
+	gm.mutex.RLock()
+	defer gm.mutex.RUnlock()
+
+	coord := Coordenada{X: posX, Y: posY}
+	log.Printf("Interagindo com caixa em (%d, %d)", posX, posY)
+	tipoCaixa, existe := gm.caixas[coord]
+
+	if existe {
+		if tipoCaixa == Armadilha {
+			gm.mutex.Lock()
+			gm.jogo.GameOver = true
+			gm.jogo.StatusMsg = "Você abriu uma armadilha! GAME OVER!"
+			gm.mutex.Unlock()
+		} else if tipoCaixa == Tesouro {
+			gm.mutex.Lock()
+			gm.jogo.StatusMsg = "Você encontrou um tesouro!"
+			gm.mutex.Unlock()
+		}
+
+		return tipoCaixa, true
+	}
+
+	// Verifica caixas adjacentes
+	adjacentes := []Coordenada{
+		{X: posX + 1, Y: posY},
+		{X: posX - 1, Y: posY},
+		{X: posX, Y: posY + 1},
+		{X: posX, Y: posY - 1},
+	}
+
+	for _, adj := range adjacentes {
+		if tipo, ok := gm.caixas[adj]; ok {
+			return tipo, true
+		}
+	}
+
+	return "", false
 }
 
 // Inicializa o jogo local com o mapa fornecido
@@ -67,7 +116,7 @@ func (gm *GameManager) CriarJogadorLocal(jogadorID string, nome string, posX, po
 		PosX:      posX,
 		PosY:      posY,
 		Cor:       cor,
-		Simbolo:   '☺',
+		Simbolo:   '♟',
 		Conectado: true,
 	}
 
@@ -161,7 +210,7 @@ func (gm *GameManager) MoverJogadorLocal(tecla rune) (*EstadoJogo, error) {
 
 // Verifica se o jogador pode se mover para a posição especificada
 func (gm *GameManager) podeMover(x, y int, jogadorID string) bool {
-	if gm.jogo == nil {
+	if gm.jogo == nil || gm.jogo.Mapa == nil {
 		return false
 	}
 
@@ -169,19 +218,19 @@ func (gm *GameManager) podeMover(x, y int, jogadorID string) bool {
 	if y < 0 || y >= len(gm.jogo.Mapa) || x < 0 || x >= len(gm.jogo.Mapa[y]) {
 		return false
 	}
-	
+
 	// Verifica colisão com elementos do mapa
 	if gm.jogo.Mapa[y][x].Tangivel {
 		return false
 	}
-	
+
 	// Verifica colisão com outros jogadores
 	for id, jogador := range gm.jogo.Jogadores {
 		if id != jogadorID && jogador.PosX == x && jogador.PosY == y && jogador.Conectado {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -192,19 +241,23 @@ func (gm *GameManager) ObterEstado() *EstadoJogo {
 	return gm.obterEstadoAtual()
 }
 
-// Obtém o estado atual do jogo local (sem lock)
+// obtém o estado atual do jogo local (sem lock)
 func (gm *GameManager) obterEstadoAtual() *EstadoJogo {
+	// Caso o jogo ainda não tenha sido inicializado
 	if gm.jogo == nil {
 		return &EstadoJogo{
 			Jogadores: make(map[string]*Jogador),
 			StatusMsg: "Jogo não inicializado",
+			Caixas:    make(map[Coordenada]TipoCaixa),
 		}
 	}
 
+	// Caso o jogo esteja carregado, retorna mapa, jogadores, status e caixas
 	return &EstadoJogo{
 		Mapa:      gm.jogo.Mapa,
 		Jogadores: gm.copiarJogadores(),
 		StatusMsg: gm.jogo.StatusMsg,
+		Caixas:    gm.caixas,
 	}
 }
 
@@ -235,6 +288,9 @@ func CarregarMapa(nome string, jogo *Jogo) error {
 	}
 	defer arq.Close()
 
+	// Ensure the map is initialized
+	jogo.Mapa = make([][]Elemento, 0)
+
 	scanner := bufio.NewScanner(arq)
 	y := 0
 	for scanner.Scan() {
@@ -243,9 +299,11 @@ func CarregarMapa(nome string, jogo *Jogo) error {
 		for _, ch := range linha {
 			e := Vazio
 			switch ch {
+			// case '■':
+			// 	e = Caixa
 			case '▤':
 				e = Parede
-			case '☠':
+			case '♙':
 				e = Inimigo
 			case '♣':
 				e = Vegetacao

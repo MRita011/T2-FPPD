@@ -21,7 +21,7 @@ type GameClient struct {
 
 // Cria um novo cliente com a config padrão
 func NewGameClient() (*GameClient, error) {
-	return NewGameClientWithConfig(LocalConfig)
+	return NewGameClientWithConfig(DefaultConfig)
 }
 
 // Cria um novo cliente com uma config específica
@@ -102,6 +102,7 @@ func (gc *GameClient) ConectarJogo(mapaFile string) (string, error) {
 
 	// Atualiza as posições dos outros jogadores
 	gc.gameManager.AtualizarJogadoresRemotos(resp.Posicoes.Jogadores)
+	gc.gameManager.AtualizarCaixas(resp.Posicoes.Caixas)
 
 	return resp.JogadorID, nil
 }
@@ -131,6 +132,47 @@ func (gc *GameClient) Mover(jogadorID string, tecla rune) error {
 	// Atualiza o estado local com as posições recebidas do servidor
 	gc.gameManager.AtualizarJogadoresRemotos(posicoes.Jogadores)
 
+	// Atualiza o mapa de caixas recebido do servidor
+	gc.gameManager.AtualizarCaixas(posicoes.Caixas)
+
+	return nil
+}
+
+// Interagir com caixa
+func (gc *GameClient) Interagir(jogadorID string) error {
+	req := InteragirRequest{JogadorID: jogadorID}
+	var resp InteragirResponse
+	if err := gc.client.Call("GameService.InteragirCaixa", req, &resp); err != nil {
+		return err
+	}
+
+	// atualiza o mapa de caixas
+	gc.gameManager.AtualizarCaixas(resp.Caixas)
+
+	// verifica o tipo de caixa encontrada e att a mensagem
+	switch resp.Tipo {
+	case Tesouro:
+		gc.gameManager.jogo.UltimoVisitado = Elemento{
+			Simbolo: '■',
+			Cor:     CorVerde,
+		}
+		gc.gameManager.jogo.StatusMsg = "Você encontrou um TESOURO!"
+	case Armadilha:
+		gc.gameManager.mutex.Lock()
+		gc.gameManager.jogo.UltimoVisitado = Elemento{
+			Simbolo: '■',
+			Cor:     CorVermelho,
+		}
+		gc.gameManager.jogo.GameOver = true
+		gc.gameManager.jogo.StatusMsg = "Você ativou uma ARMADILHA! GAME OVER!"
+		gc.gameManager.mutex.Unlock()
+		//Perguntar se o jogador que esperar uma nova partida começar ou sair
+		gc.gameManager.jogo.StatusMsg += " Pressione 'ESC' para sair ou aguarde uma nova partida."
+	case "":
+		gc.gameManager.jogo.StatusMsg = "Nada a interagir aqui."
+	default:
+		gc.gameManager.jogo.StatusMsg = "Nem eu sei o que é isso!"
+	}
 	return nil
 }
 
@@ -144,6 +186,9 @@ func (gc *GameClient) ObterPosicoes() error {
 
 	// Atualiza o jogo local com as posições mais recentes
 	gc.gameManager.AtualizarJogadoresRemotos(posicoes.Jogadores)
+
+	// Atualiza o mapa de caixas com as informações mais recentes
+	gc.gameManager.AtualizarCaixas(posicoes.Caixas)
 
 	return nil
 }
